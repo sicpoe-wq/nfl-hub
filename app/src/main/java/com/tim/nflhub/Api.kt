@@ -15,7 +15,13 @@ data class Player(
 )
 data class Injury(
     val playerId: String, val name: String, val pos: String, val status: String,
-    val type: String, val comment: String, val date: String, val headshot: String
+    val type: String, val comment: String, val date: String, val headshot: String,
+    val jersey: String = ""
+)
+/** Full injury info for one player; blank string = ESPN did not provide it. */
+data class InjuryDetail(
+    val status: String, val bodyPart: String, val location: String, val detail: String, val side: String,
+    val returnDate: String, val fantasyStatus: String, val shortComment: String, val longComment: String, val date: String
 )
 data class NewsItem(val headline: String, val description: String, val image: String, val published: String, val link: String)
 data class StatCategory(val name: String, val rows: List<Pair<String, String>>)
@@ -29,7 +35,7 @@ object Api {
     private fun get(url: String): JSONObject {
         val c = URL(url).openConnection() as HttpURLConnection
         c.connectTimeout = 15000; c.readTimeout = 20000
-        c.setRequestProperty("User-Agent", "NflHub/1.1")
+        c.setRequestProperty("User-Agent", "NflHub/1.2")
         try {
             if (c.responseCode != 200) throw RuntimeException("HTTP ${c.responseCode}")
             return JSONObject(c.inputStream.bufferedReader().readText())
@@ -78,7 +84,8 @@ object Api {
                     if (a.has("age")) a.get("age").toString() else "",
                     a.optJSONObject("college")?.str("name") ?: "",
                     a.optJSONObject("headshot")?.str("href") ?: "",
-                    a.optJSONArray("injuries")?.optJSONObject(0)?.str("status") ?: "",
+                    a.optJSONArray("injuries")?.optJSONObject(0)?.str("status")?.takeIf { it.isNotBlank() }
+                        ?: a.optJSONObject("status")?.str("name")?.takeIf { it.equals("Day-To-Day", true) } ?: "",
                     a.optJSONObject("experience")?.let { e -> if (e.has("years")) e.get("years").toString() else "" } ?: ""
                 )
             }
@@ -88,20 +95,33 @@ object Api {
 
     private var injCache: Pair<Long, JSONArray>? = null
 
-    /** Team-level /teams/{id}/injuries returns an empty object, so we use the league-wide /injuries feed and filter by team. */
-    suspend fun injuries(teamId: String, force: Boolean = false): List<Injury> = withContext(Dispatchers.IO) {
+    private fun isInjured(st: String) = st.isNotBlank() && !st.equals("Active", true) && !st.equals("Practice Squad", true)
+
+    private fun feedIdOf(a: JSONObject?): String {
+        a ?: return ""
+        a.str("id").let { if (it.isNotBlank() && !it.startsWith("-")) return it }
+        val links = a.optJSONArray("links") ?: return ""
+        for (i in 0 until links.length()) {
+            val h = links.getJSONObject(i).str("href")
+            if (h.contains("/id/")) return h.substringAfter("/id/").substringBefore("/")
+        }
+        return ""
+    }
+
+    private fun feedInjuries(teamId: String, force: Boolean): List<Injury> {
         val now = System.currentTimeMillis()
         val cached = injCache
-        val all = if (!force && cached != null && now - cached.first < 120_000) cached.second
-        else get("$SITE/injuries").getJSONArray("injuries").also { injCache = now to it }
+        val all = try {
+            if (!force && cached != null && now - cached.first < 120_000) cached.second
+            else get("$SITE/injuries").getJSONArray("injuries").also { injCache = now to it }
+        } catch (e: Exception) { return emptyList() }
         var team: JSONObject? = null
         for (i in 0 until all.length()) if (all.getJSONObject(i).str("id") == teamId) team = all.getJSONObject(i)
-        val arr = team?.optJSONArray("injuries") ?: return@withContext emptyList()
-        (0 until arr.length()).map {
+        val arr = team?.optJSONArray("injuries") ?: return emptyList()
+        return (0 until arr.length()).map {
             val x = arr.getJSONObject(it); val a = x.optJSONObject("athlete")
             Injury(
-                a?.optJSONObject("links")?.str("x") ?: (a?.optJSONArray("links")?.optJSONObject(0)?.str("href")
-                    ?.substringAfter("/id/", "")?.substringBefore("/") ?: ""),
+                feedIdOf(a),
                 a?.str("displayName") ?: "", a?.optJSONObject("position")?.str("abbreviation") ?: "",
                 x.str("status"), x.optJSONObject("details")?.let { d ->
                     listOf(d.str("type"), d.str("location")).filter { s -> s.isNotBlank() && s != "Not Specified" }.distinct().joinToString(" · ")
@@ -110,6 +130,47 @@ object Api {
                 a?.optJSONObject("headshot")?.str("href") ?: ""
             )
         }
+    }
+
+    /**
+     * ESPN's league-wide /injuries feed is incomplete (it omitted 7 of 20 flagged Eagles on the roster, e.g. IR players)
+     * and also lists "Active" players with old notes. So we merge: roster-flagged players + feed entries with an injured status,
+     * deduped by athlete id (fallback: name). Feed data wins where present (it has comments/body part).
+     */
+    suspend fun injuries(teamId: String, force: Boolean = false): List<Injury> = withContext(Dispatchers.IO) {
+        val feed = feedInjuries(teamId, force).filter { isInjured(it.status) }
+        val roster = try { roster(teamId) } catch (e: Exception) { emptyList() }
+        val byKey = LinkedHashMap<String, Injury>()
+        fun key(id: String, name: String) = if (id.isNotBlank()) id else "n:$name"
+        val rosterById = roster.associateBy { it.id }
+        val rosterByName = roster.associateBy { it.name }
+        for (f in feed) {
+            val r = rosterById[f.playerId] ?: rosterByName[f.name]
+            val id = f.playerId.ifBlank { r?.id ?: "" }
+            byKey[key(id, f.name)] = f.copy(playerId = id, jersey = r?.jersey ?: "",
+                pos = f.pos.ifBlank { r?.pos ?: "" }, headshot = f.headshot.ifBlank { r?.headshot ?: "" })
+        }
+        for (p in roster) if (isInjured(p.status) && !byKey.containsKey(key(p.id, p.name)))
+            byKey[key(p.id, p.name)] = Injury(p.id, p.name, p.pos, p.status, "", "", "", p.headshot, p.jersey)
+        val rank = { s: String -> when { s.equals("Out", true) -> 0; s.contains("Reserve", true) -> 1; s.equals("Doubtful", true) -> 2
+            s.equals("Questionable", true) -> 3; else -> 4 } }
+        byKey.values.sortedWith(compareBy<Injury> { rank(it.status) }.thenBy { it.name })
+    }
+
+    /** Per-athlete injury detail from ESPN's athlete endpoint (has returnDate, body part, long comment). Null if none. */
+    suspend fun injuryDetail(playerId: String): InjuryDetail? = withContext(Dispatchers.IO) {
+        if (playerId.isBlank()) return@withContext null
+        try {
+            val inj = get("$COMMON/athletes/$playerId").optJSONObject("athlete")?.optJSONArray("injuries")?.optJSONObject(0)
+                ?: return@withContext null
+            val d = inj.optJSONObject("details")
+            fun clean(s: String?) = if (s.isNullOrBlank() || s == "Not Specified") "" else s
+            InjuryDetail(
+                inj.str("status"), clean(d?.str("type")), clean(d?.str("location")), clean(d?.str("detail")), clean(d?.str("side")),
+                d?.str("returnDate")?.take(10) ?: "", d?.optJSONObject("fantasyStatus")?.str("description") ?: "",
+                inj.str("shortComment"), inj.str("longComment"), inj.str("date").take(10)
+            )
+        } catch (e: Exception) { null }
     }
 
     suspend fun teamStats(teamId: String): List<StatCategory> = withContext(Dispatchers.IO) {

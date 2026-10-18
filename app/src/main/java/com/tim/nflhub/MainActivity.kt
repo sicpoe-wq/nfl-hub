@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import android.content.Intent
@@ -122,7 +123,7 @@ fun App() {
                     0 -> NewsTab(teamId)
                     1 -> RosterTab(teamId, rosterOrder) { selected = it }
                     2 -> StatsTab(teamId)
-                    else -> InjuriesTab(teamId) { id, name -> selected = Player(id, name, "", "", "", "", "", "", "", "", "", "") }
+                    else -> InjuriesTab(teamId) { i -> selected = Player(i.playerId, i.name, i.jersey, i.pos, "", "", "", "", "", i.headshot, i.status, "") }
                 }
             }
         }
@@ -227,13 +228,13 @@ fun StatsTab(teamId: String) {
 }
 
 @Composable
-fun InjuriesTab(teamId: String, onPlayer: (String, String) -> Unit) {
+fun InjuriesTab(teamId: String, onPlayer: (Injury) -> Unit) {
     val (l, retry) = rememberLoad(teamId) { Api.injuries(teamId, force = true) }
     LoadView(l, retry) { inj ->
         if (inj.isEmpty()) { Box(Modifier.fillMaxSize(), Alignment.Center) { Text("No injuries reported") }; return@LoadView }
         LazyColumn(Modifier.fillMaxSize()) {
             items(inj) { i ->
-                Column(Modifier.fillMaxWidth().clickable(enabled = i.playerId.isNotBlank()) { onPlayer(i.playerId, i.name) }.padding(16.dp, 10.dp)) {
+                Column(Modifier.fillMaxWidth().clickable { onPlayer(i) }.padding(16.dp, 10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Headshot(i.headshot, 44); Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
@@ -253,6 +254,10 @@ fun InjuriesTab(teamId: String, onPlayer: (String, String) -> Unit) {
 @Composable
 fun PlayerSheet(p: Player) {
     val (l, retry) = rememberLoad(p.id) { Api.playerStats(p.id) }
+    var inj by remember(p.id) { mutableStateOf<InjuryDetail?>(null) }
+    var injLoaded by remember(p.id) { mutableStateOf(false) }
+    LaunchedEffect(p.id) { inj = Api.injuryDetail(p.id); injLoaded = true }
+    val injured = p.status.isNotBlank() && !p.status.equals("Active", true) && !p.status.equals("Practice Squad", true)
     Column(Modifier.fillMaxWidth().heightIn(max = 620.dp).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Headshot(p.headshot, 56); Spacer(Modifier.width(12.dp))
@@ -264,8 +269,10 @@ fun PlayerSheet(p: Player) {
         Spacer(Modifier.height(8.dp))
         Box(Modifier.weight(1f, fill = false)) {
             LoadView(l, retry) { ps ->
-                if (ps.tables.isEmpty()) { Text("No stats available for this player.", Modifier.padding(24.dp)); return@LoadView }
                 LazyColumn {
+                    if (injured || (inj?.status?.let { !it.equals("Active", true) } == true)) item { InjuryCard(p, inj, injLoaded) }
+                    item { Text("Player stats", Modifier.padding(top = 12.dp), fontWeight = FontWeight.Bold, fontSize = 17.sp) }
+                    if (ps.tables.isEmpty()) item { Text("No stats available for this player.", Modifier.padding(vertical = 12.dp)) }
                     items(ps.tables) { (name, t) ->
                         Text(name, Modifier.padding(top = 12.dp, bottom = 4.dp), fontWeight = FontWeight.Bold, color = EaglesGreen)
                         Column(Modifier.horizontalScroll(rememberScrollState())) {
@@ -314,5 +321,39 @@ fun NewsTab(teamId: String) {
                 }
             }
         }
+    }
+}
+
+@Composable
+fun InjuryCard(p: Player, d: InjuryDetail?, loaded: Boolean) {
+    fun v(s: String?) = if (s.isNullOrBlank()) "Not reported" else s
+    val status = d?.status?.takeIf { it.isNotBlank() } ?: p.status
+    val body = d?.let { listOf(it.bodyPart, it.detail.takeIf { x -> x != it.bodyPart }, it.side.takeIf { x -> x.isNotBlank() }?.let { x -> "($x)" })
+        .filter { x -> !x.isNullOrBlank() }.joinToString(" ") } ?: ""
+    val ret = d?.returnDate?.takeIf { it.isNotBlank() }?.let {
+        try { java.time.LocalDate.parse(it).format(java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy")) + " (estimated)" } catch (e: Exception) { it }
+    } ?: ""
+    val how = d?.longComment?.takeIf { it.isNotBlank() } ?: d?.shortComment ?: ""
+    Column(Modifier.fillMaxWidth().padding(top = 4.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFFFF3F3)).padding(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Injury report", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = Color(0xFFC62828), modifier = Modifier.weight(1f))
+            StatusChip(status)
+        }
+        if (!loaded) Text("Loading details…", fontSize = 12.sp, color = Color.Gray)
+        InjRow("Injury", v(body))
+        InjRow("Status", v(status))
+        InjRow("Expected return", v(ret))
+        if (d != null && d.fantasyStatus.isNotBlank()) InjRow("Designation", d.fantasyStatus)
+        InjRow("Last update", v(d?.date))
+        InjRow("How it happened / notes", v(how))
+        Text("Source: ESPN. Return dates are estimates and \"Not reported\" means ESPN has no data.", fontSize = 11.sp, color = Color.Gray, modifier = Modifier.padding(top = 6.dp))
+    }
+}
+
+@Composable
+fun InjRow(label: String, value: String) {
+    Column(Modifier.padding(top = 6.dp)) {
+        Text(label, fontSize = 12.sp, color = Color.Gray)
+        Text(value, fontSize = 14.sp, fontWeight = FontWeight.Medium)
     }
 }
