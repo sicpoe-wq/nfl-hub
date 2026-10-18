@@ -176,14 +176,16 @@ fun StatusChip(s: String) {
 
 @Composable
 fun RosterTab(teamId: String, posOrder: List<String>, onPlayer: (Player) -> Unit) {
-    val (l, retry) = rememberLoad(teamId) { Api.roster(teamId) }
+    val (l, retry) = rememberLoad(teamId) { Api.rosterWithInjuries(teamId) }
     LoadView(l, retry) { players ->
-        val order = listOf("offense", "defense", "specialTeam", "injuredReserveOrOut", "practiceSquad", "suspended")
+        val order = listOf("offense", "defense", "specialTeam", "practiceSquad", "injured", "suspended")
         val names = mapOf("offense" to "Offense", "defense" to "Defense", "specialTeam" to "Special Teams",
-            "injuredReserveOrOut" to "Injured Reserve / Out", "practiceSquad" to "Practice Squad", "suspended" to "Suspended")
+            "injured" to "Injured / Out", "practiceSquad" to "Practice Squad", "suspended" to "Suspended")
         val rank = posOrder.withIndex().associate { it.value to it.index }
         fun rankOf(p: Player) = Positions.keyForAbbr(p.pos)?.let { rank[it] } ?: Int.MAX_VALUE
-        val grouped = players.groupBy { it.group }.mapValues { (_, l) -> l.sortedWith(compareBy<Player> { rankOf(it) }.thenBy { it.pos }.thenBy { it.jersey.toIntOrNull() ?: 999 }) }
+        fun sevOf(s: String) = when { s.equals("Out", true) -> 0; s.contains("Reserve", true) -> 1; s.equals("Doubtful", true) -> 2
+            s.equals("Questionable", true) -> 3; else -> 4 }
+        val grouped = players.groupBy { it.group }.mapValues { (_, l) -> l.sortedWith(compareBy<Player> { if (it.group == "injured") sevOf(it.status) else 0 }.thenBy { rankOf(it) }.thenBy { it.pos }.thenBy { it.jersey.toIntOrNull() ?: 999 }) }
         LazyColumn(Modifier.fillMaxSize()) {
             order.forEach { g ->
                 val list = grouped[g] ?: return@forEach

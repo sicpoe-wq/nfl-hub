@@ -157,6 +157,22 @@ object Api {
         byKey.values.sortedWith(compareBy<Injury> { rank(it.status) }.thenBy { it.name })
     }
 
+    /** Roster with the SAME merged injury list as the Injuries tab applied: injured players get group "injured" and the merged status. */
+    suspend fun rosterWithInjuries(teamId: String): List<Player> = withContext(Dispatchers.IO) {
+        val roster = roster(teamId)
+        val inj = try { injuries(teamId, force = true) } catch (e: Exception) { emptyList() }
+        val byId = inj.filter { it.playerId.isNotBlank() }.associateBy { it.playerId }
+        val byName = inj.associateBy { it.name }
+        roster.map { p ->
+            val i = byId[p.id] ?: byName[p.name]
+            when {
+                i != null -> p.copy(group = "injured", status = i.status)
+                p.group == "injuredReserveOrOut" -> p.copy(group = "injured", status = p.status.ifBlank { "Injured Reserve" })
+                else -> p
+            }
+        }
+    }
+
     /** Per-athlete injury detail from ESPN's athlete endpoint (has returnDate, body part, long comment). Null if none. */
     suspend fun injuryDetail(playerId: String): InjuryDetail? = withContext(Dispatchers.IO) {
         if (playerId.isBlank()) return@withContext null
