@@ -17,6 +17,7 @@ data class Injury(
     val playerId: String, val name: String, val pos: String, val status: String,
     val type: String, val comment: String, val date: String, val headshot: String
 )
+data class NewsItem(val headline: String, val description: String, val image: String, val published: String, val link: String)
 data class StatCategory(val name: String, val rows: List<Pair<String, String>>)
 data class StatTable(val labels: List<String>, val rows: List<Pair<String, List<String>>>)
 data class PlayerStats(val tables: List<Pair<String, StatTable>>)
@@ -28,7 +29,7 @@ object Api {
     private fun get(url: String): JSONObject {
         val c = URL(url).openConnection() as HttpURLConnection
         c.connectTimeout = 15000; c.readTimeout = 20000
-        c.setRequestProperty("User-Agent", "NflHub/1.0")
+        c.setRequestProperty("User-Agent", "NflHub/1.1")
         try {
             if (c.responseCode != 200) throw RuntimeException("HTTP ${c.responseCode}")
             return JSONObject(c.inputStream.bufferedReader().readText())
@@ -46,6 +47,19 @@ object Api {
             Team(t.str("id"), t.str("displayName"), t.str("abbreviation"),
                 logos?.optJSONObject(0)?.str("href") ?: "", t.str("color"))
         }.sortedBy { it.name }
+    }
+
+    suspend fun news(teamId: String): List<NewsItem> = withContext(Dispatchers.IO) {
+        val arr = get("$SITE/news?team=$teamId&limit=25").optJSONArray("articles") ?: return@withContext emptyList()
+        (0 until arr.length()).mapNotNull {
+            val x = arr.getJSONObject(it)
+            val link = x.optJSONObject("links")?.optJSONObject("web")?.str("href") ?: ""
+            if (x.str("headline").isBlank() || link.isBlank()) return@mapNotNull null
+            val imgs = x.optJSONArray("images")
+            var img = ""
+            if (imgs != null) for (i in 0 until imgs.length()) { val u = imgs.getJSONObject(i).str("url"); if (u.isNotBlank()) { img = u; break } }
+            NewsItem(x.str("headline"), x.str("description"), img, x.str("published"), link)
+        }.sortedByDescending { it.published }
     }
 
     suspend fun roster(teamId: String): List<Player> = withContext(Dispatchers.IO) {

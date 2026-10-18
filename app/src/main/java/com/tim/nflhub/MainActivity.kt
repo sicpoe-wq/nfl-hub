@@ -13,6 +13,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,13 +76,22 @@ fun <T> LoadView(l: Load<T>, retry: () -> Unit, content: @Composable (T) -> Unit
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun App() {
-    var teamId by remember { mutableStateOf(EAGLES_ID) }
+    val ctx = LocalContext.current
+    var defaultTeamId by remember { mutableStateOf(Prefs.defaultTeam(ctx)) }
+    var teamId by remember { mutableStateOf(defaultTeamId) }
+    var showSettings by remember { mutableStateOf(false) }
+    var rosterOrder by remember { mutableStateOf(Prefs.rosterOrder(ctx)) }
     var showPicker by remember { mutableStateOf(false) }
     var tab by remember { mutableIntStateOf(0) }
     var selected by remember { mutableStateOf<Player?>(null) }
     val (teamsL, retryTeams) = rememberLoad("teams") { Api.teams() }
     val team = (teamsL as? Load.Ok)?.v?.firstOrNull { it.id == teamId }
-    val title = team?.name ?: "Philadelphia Eagles"
+    val title = team?.name ?: if (teamId == EAGLES_ID) "Philadelphia Eagles" else "NFL Hub"
+    if (showSettings) {
+        androidx.activity.compose.BackHandler { showSettings = false }
+        SettingsScreen(teamsL, retryTeams, { showSettings = false }, { rosterOrder = it }, { defaultTeamId = it })
+        return
+    }
 
     Scaffold(topBar = {
         Column {
@@ -88,13 +103,14 @@ fun App() {
                     }
                 },
                 actions = {
-                    if (teamId != EAGLES_ID) TextButton(onClick = { teamId = EAGLES_ID }) { Text("🦅 Home", color = Color.White) }
+                    if (teamId != defaultTeamId) TextButton(onClick = { teamId = defaultTeamId }) { Text("🏠 Home", color = Color.White) }
                     TextButton(onClick = { showPicker = true }) { Text("Teams ▾", color = Color.White) }
+                    IconButton(onClick = { showSettings = true }) { Icon(Icons.Default.Settings, "Settings", tint = Color.White) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = EaglesGreen, titleContentColor = Color.White)
             )
             TabRow(selectedTabIndex = tab, containerColor = EaglesGreen, contentColor = Color.White) {
-                listOf("Roster", "Stats", "Injuries").forEachIndexed { i, t ->
+                listOf("News", "Roster", "Stats", "Injuries").forEachIndexed { i, t ->
                     Tab(selected = tab == i, onClick = { tab = i }, text = { Text(t) })
                 }
             }
@@ -103,8 +119,9 @@ fun App() {
         Box(Modifier.padding(pad).fillMaxSize()) {
             key(teamId) {
                 when (tab) {
-                    0 -> RosterTab(teamId) { selected = it }
-                    1 -> StatsTab(teamId)
+                    0 -> NewsTab(teamId)
+                    1 -> RosterTab(teamId, rosterOrder) { selected = it }
+                    2 -> StatsTab(teamId)
                     else -> InjuriesTab(teamId) { id, name -> selected = Player(id, name, "", "", "", "", "", "", "", "", "", "") }
                 }
             }
@@ -157,13 +174,15 @@ fun StatusChip(s: String) {
 }
 
 @Composable
-fun RosterTab(teamId: String, onPlayer: (Player) -> Unit) {
+fun RosterTab(teamId: String, posOrder: List<String>, onPlayer: (Player) -> Unit) {
     val (l, retry) = rememberLoad(teamId) { Api.roster(teamId) }
     LoadView(l, retry) { players ->
         val order = listOf("offense", "defense", "specialTeam", "injuredReserveOrOut", "practiceSquad", "suspended")
         val names = mapOf("offense" to "Offense", "defense" to "Defense", "specialTeam" to "Special Teams",
             "injuredReserveOrOut" to "Injured Reserve / Out", "practiceSquad" to "Practice Squad", "suspended" to "Suspended")
-        val grouped = players.groupBy { it.group }
+        val rank = posOrder.withIndex().associate { it.value to it.index }
+        fun rankOf(p: Player) = Positions.keyForAbbr(p.pos)?.let { rank[it] } ?: Int.MAX_VALUE
+        val grouped = players.groupBy { it.group }.mapValues { (_, l) -> l.sortedWith(compareBy<Player> { rankOf(it) }.thenBy { it.pos }.thenBy { it.jersey.toIntOrNull() ?: 999 }) }
         LazyColumn(Modifier.fillMaxSize()) {
             order.forEach { g ->
                 val list = grouped[g] ?: return@forEach
@@ -267,3 +286,33 @@ fun PlayerSheet(p: Player) {
 @Composable
 fun Cell(t: String, w: Int, bold: Boolean) =
     Text(t, Modifier.width(w.dp).padding(vertical = 3.dp), fontSize = 12.sp, fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal, maxLines = 1)
+
+fun niceDate(iso: String): String = try {
+    val t = java.time.Instant.parse(iso)
+    java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy · h:mm a").withZone(java.time.ZoneId.systemDefault()).format(t)
+} catch (e: Exception) { iso.take(10) }
+
+@Composable
+fun NewsTab(teamId: String) {
+    val ctx = LocalContext.current
+    val (l, retry) = rememberLoad(teamId) { Api.news(teamId) }
+    LoadView(l, retry) { items ->
+        if (items.isEmpty()) { Box(Modifier.fillMaxSize(), Alignment.Center) { Text("No news available") }; return@LoadView }
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(items) { n ->
+                Card(Modifier.fillMaxWidth().clickable {
+                    try { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(n.link)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
+                }, colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
+                    Column {
+                        if (n.image.isNotBlank()) AsyncImage(n.image, null, Modifier.fillMaxWidth().aspectRatio(16f / 9f), contentScale = ContentScale.Crop)
+                        Column(Modifier.padding(12.dp)) {
+                            Text(n.headline, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                            if (n.description.isNotBlank()) Text(n.description, Modifier.padding(top = 4.dp), fontSize = 13.sp, color = Color.DarkGray, maxLines = 3)
+                            Text(niceDate(n.published), Modifier.padding(top = 6.dp), fontSize = 12.sp, color = Color.Gray)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
