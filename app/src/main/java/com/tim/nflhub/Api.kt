@@ -39,10 +39,10 @@ object Api {
     private const val SITE = "https://site.api.espn.com/apis/site/v2/sports/football/nfl"
     private const val COMMON = "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl"
 
-    private fun get(url: String): JSONObject {
+    internal fun get(url: String): JSONObject {
         val c = URL(url).openConnection() as HttpURLConnection
         c.connectTimeout = 15000; c.readTimeout = 20000
-        c.setRequestProperty("User-Agent", "NflHub/1.4")
+        c.setRequestProperty("User-Agent", "NflHub/1.5")
         try {
             if (c.responseCode != 200) throw RuntimeException("HTTP ${c.responseCode}")
             return JSONObject(c.inputStream.bufferedReader().readText())

@@ -86,12 +86,24 @@ fun App() {
     var tab by remember { mutableIntStateOf(0) }
     var selected by remember { mutableStateOf<Player?>(null) }
     var showLeagueNews by remember { mutableStateOf(false) }
+    var showStandings by remember { mutableStateOf(false) }
+    var openGame by remember { mutableStateOf<Pair<String, String>?>(null) }
     val (teamsL, retryTeams) = rememberLoad("teams") { Api.teams() }
     val team = (teamsL as? Load.Ok)?.v?.firstOrNull { it.id == teamId }
     val title = team?.name ?: if (teamId == EAGLES_ID) "Philadelphia Eagles" else "NFL Hub"
     if (showSettings) {
         androidx.activity.compose.BackHandler { showSettings = false }
         SettingsScreen(teamsL, retryTeams, { showSettings = false }, { rosterOrder = it }, { defaultTeamId = it })
+        return
+    }
+    openGame?.let { (id, wk) ->
+        androidx.activity.compose.BackHandler { openGame = null }
+        GameScreen(id, wk) { openGame = null }
+        return
+    }
+    if (showStandings) {
+        androidx.activity.compose.BackHandler { showStandings = false }
+        StandingsScreen(onBack = { showStandings = false }, onTeam = { teamId = it; showStandings = false })
         return
     }
     if (showLeagueNews) {
@@ -127,7 +139,7 @@ fun App() {
             key(teamId) {
                 when (tab) {
                     0 -> NewsTab(teamId, team?.nickname ?: "")
-                    1 -> ScheduleTab(teamId)
+                    1 -> ScheduleTab(teamId) { g -> openGame = g.id to scheduleWeekLabel(g) }
                     2 -> RosterTab(teamId, rosterOrder) { selected = it }
                     3 -> StatsTab(teamId)
                     else -> InjuriesTab(teamId) { i -> selected = Player(i.playerId, i.name, i.jersey, i.pos, "", "", "", "", "", i.headshot, i.status, "") }
@@ -149,6 +161,18 @@ fun App() {
                             Column(Modifier.weight(1f)) {
                                 Text("NFL News", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = EaglesGreen)
                                 Text("Top stories from around the league", fontSize = 12.sp, color = Color.Gray)
+                            }
+                            Text("›", fontSize = 24.sp, color = EaglesGreen)
+                        }
+                        HorizontalDivider()
+                        Row(
+                            Modifier.fillMaxWidth().clickable { showPicker = false; showStandings = true }.background(Color(0xFFE8F0F1)).padding(16.dp, 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(Modifier.size(36.dp), Alignment.Center) { Text("🏆", fontSize = 24.sp) }; Spacer(Modifier.width(14.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("Standings", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = EaglesGreen)
+                                Text("Division standings & playoff picture", fontSize = 12.sp, color = Color.Gray)
                             }
                             Text("›", fontSize = 24.sp, color = EaglesGreen)
                         }
@@ -393,7 +417,7 @@ fun parseEspnInstant(iso: String): java.time.Instant? = try {
 }
 
 @Composable
-fun ScheduleTab(teamId: String) {
+fun ScheduleTab(teamId: String, onGame: (Game) -> Unit = {}) {
     val (l, retry) = rememberLoad(teamId) { Api.schedule(teamId) }
     LoadView(l, retry) { sch ->
         if (sch.games.isEmpty()) { Box(Modifier.fillMaxSize(), Alignment.Center) { Text("No schedule available") }; return@LoadView }
@@ -415,7 +439,7 @@ fun ScheduleTab(teamId: String) {
                     before + listOf("BYE") + after
                 } else games
                 items(rows) { r ->
-                    if (r is Game) GameRow(r, zone) else ByeRow(sch.byeWeek)
+                    if (r is Game) GameRow(r, zone, onGame) else ByeRow(sch.byeWeek)
                     HorizontalDivider()
                 }
             }
@@ -432,7 +456,8 @@ fun ByeRow(week: Int) {
 }
 
 @Composable
-fun GameRow(g: Game, zone: java.time.ZoneId) {
+fun GameRow(g: Game, zone: java.time.ZoneId, onGame: (Game) -> Unit = {}) {
+    val tappable = g.state == "post" || g.state == "in"
     val inst = parseEspnInstant(g.date)
     val zdt = inst?.atZone(zone)
     val dateStr = zdt?.format(java.time.format.DateTimeFormatter.ofPattern("EEE, MMM d")) ?: g.date.take(10)
@@ -446,7 +471,7 @@ fun GameRow(g: Game, zone: java.time.ZoneId) {
         g.seasonType == 3 -> g.weekText.ifBlank { "Playoffs" }
         else -> "Week ${g.weekNum}"
     }
-    Row(Modifier.fillMaxWidth().padding(16.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().then(if (tappable) Modifier.clickable { onGame(g) } else Modifier).padding(16.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(wk, Modifier.width(64.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = EaglesGreen, maxLines = 2)
         Text(if (g.home) "vs" else "@", Modifier.width(24.dp), fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.SemiBold)
         if (g.oppLogo.isNotBlank()) AsyncImage(g.oppLogo, null, Modifier.size(32.dp)) else Spacer(Modifier.size(32.dp))
@@ -473,6 +498,7 @@ fun GameRow(g: Game, zone: java.time.ZoneId) {
             }
             g.state == "post" -> Text(g.statusDetail.ifBlank { "Final" }, fontSize = 12.sp, color = Color.Gray)
         }
+        if (tappable) Text("›", Modifier.padding(start = 8.dp), fontSize = 20.sp, color = Color.Gray)
     }
 }
 
@@ -508,4 +534,10 @@ fun InjRow(label: String, value: String) {
         Text(label, fontSize = 12.sp, color = Color.Gray)
         Text(value, fontSize = 14.sp, fontWeight = FontWeight.Medium)
     }
+}
+
+fun scheduleWeekLabel(g: Game): String = when (g.seasonType) {
+    1 -> "Preseason Week ${g.weekNum}"
+    3 -> g.weekText.ifBlank { "Playoffs" }
+    else -> "Week ${g.weekNum}"
 }
