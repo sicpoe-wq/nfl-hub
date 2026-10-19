@@ -7,7 +7,7 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-data class Team(val id: String, val name: String, val abbr: String, val logo: String, val color: String)
+data class Team(val id: String, val name: String, val abbr: String, val logo: String, val color: String, val nickname: String = "")
 data class Player(
     val id: String, val name: String, val jersey: String, val pos: String, val group: String,
     val height: String, val weight: String, val age: String, val college: String,
@@ -24,6 +24,13 @@ data class InjuryDetail(
     val returnDate: String, val fantasyStatus: String, val shortComment: String, val longComment: String, val date: String
 )
 data class NewsItem(val headline: String, val description: String, val image: String, val published: String, val link: String)
+data class Game(
+    val id: String, val seasonType: Int, val weekNum: Int, val weekText: String, val date: String, val timeValid: Boolean,
+    val home: Boolean, val oppName: String, val oppAbbr: String, val oppLogo: String,
+    val tv: String, val venue: String, val venueCity: String, val state: String, val statusDetail: String,
+    val myScore: String, val oppScore: String, val result: String
+)
+data class Schedule(val games: List<Game>, val byeWeek: Int, val seasonYear: String)
 data class StatCategory(val name: String, val rows: List<Pair<String, String>>)
 data class StatTable(val labels: List<String>, val rows: List<Pair<String, List<String>>>)
 data class PlayerStats(val tables: List<Pair<String, StatTable>>)
@@ -35,7 +42,7 @@ object Api {
     private fun get(url: String): JSONObject {
         val c = URL(url).openConnection() as HttpURLConnection
         c.connectTimeout = 15000; c.readTimeout = 20000
-        c.setRequestProperty("User-Agent", "NflHub/1.2")
+        c.setRequestProperty("User-Agent", "NflHub/1.4")
         try {
             if (c.responseCode != 200) throw RuntimeException("HTTP ${c.responseCode}")
             return JSONObject(c.inputStream.bufferedReader().readText())
@@ -51,21 +58,107 @@ object Api {
             val t = arr.getJSONObject(it).getJSONObject("team")
             val logos = t.optJSONArray("logos")
             Team(t.str("id"), t.str("displayName"), t.str("abbreviation"),
-                logos?.optJSONObject(0)?.str("href") ?: "", t.str("color"))
+                logos?.optJSONObject(0)?.str("href") ?: "", t.str("color"), t.optString("name", t.str("shortDisplayName")))
         }.sortedBy { it.name }
     }
 
-    suspend fun news(teamId: String): List<NewsItem> = withContext(Dispatchers.IO) {
-        val arr = get("$SITE/news?team=$teamId&limit=25").optJSONArray("articles") ?: return@withContext emptyList()
-        (0 until arr.length()).mapNotNull {
+    private fun parseNews(arr: JSONArray?, keep: (JSONObject) -> Boolean = { true }): List<NewsItem> {
+        arr ?: return emptyList()
+        return (0 until arr.length()).mapNotNull {
             val x = arr.getJSONObject(it)
+            if (!keep(x)) return@mapNotNull null
             val link = x.optJSONObject("links")?.optJSONObject("web")?.str("href") ?: ""
             if (x.str("headline").isBlank() || link.isBlank()) return@mapNotNull null
             val imgs = x.optJSONArray("images")
             var img = ""
             if (imgs != null) for (i in 0 until imgs.length()) { val u = imgs.getJSONObject(i).str("url"); if (u.isNotBlank()) { img = u; break } }
             NewsItem(x.str("headline"), x.str("description"), img, x.str("published"), link)
-        }.sortedByDescending { it.published }
+        }.distinctBy { it.link }.sortedByDescending { it.published }
+    }
+
+    private fun teamTagIds(x: JSONObject): List<String> {
+        val cats = x.optJSONArray("categories") ?: return emptyList()
+        return (0 until cats.length()).mapNotNull {
+            val c = cats.getJSONObject(it)
+            if (c.str("type") != "team") null
+            else c.optString("teamId", "").ifBlank { c.optJSONObject("team")?.optString("id", "") ?: "" }.ifBlank { null }
+        }.distinct()
+    }
+
+    /**
+     * ESPN's ?team= feed only returns articles tagged with the team, but many are league-wide roundups
+     * (power rankings, "Week 6 takeaways") that tag 8-32 teams. Keep an article only if it's tagged with this team AND
+     * it's tagged with at most 2 teams (team stories, game previews/recaps) or the headline names the team.
+     */
+    suspend fun news(teamId: String, nickname: String = ""): List<NewsItem> = withContext(Dispatchers.IO) {
+        val arr = get("$SITE/news?team=$teamId&limit=50").optJSONArray("articles")
+        val nick = nickname.trim()
+        val rx = if (nick.isNotBlank()) Regex("\\b" + Regex.escape(nick) + "\\b", RegexOption.IGNORE_CASE) else null
+        parseNews(arr) { x ->
+            val ids = teamTagIds(x)
+            teamId in ids && (ids.size <= 2 || (rx != null && rx.containsMatchIn(x.str("headline"))))
+        }
+    }
+
+    suspend fun leagueNews(): List<NewsItem> = withContext(Dispatchers.IO) {
+        parseNews(get("$SITE/news?limit=50").optJSONArray("articles"))
+    }
+
+    private fun parseGames(teamId: String, d: JSONObject): List<Game> {
+        val ev = d.optJSONArray("events") ?: return emptyList()
+        return (0 until ev.length()).mapNotNull { i ->
+            val e = ev.getJSONObject(i)
+            val c = e.optJSONArray("competitions")?.optJSONObject(0) ?: return@mapNotNull null
+            val comps = c.optJSONArray("competitors") ?: return@mapNotNull null
+            var me: JSONObject? = null; var opp: JSONObject? = null
+            for (k in 0 until comps.length()) { val t = comps.getJSONObject(k); if (t.optJSONObject("team")?.str("id") == teamId) me = t else opp = t }
+            if (me == null || opp == null) return@mapNotNull null
+            val ot = opp.optJSONObject("team")
+            fun score(t: JSONObject): String = when (val sc = t.opt("score")) {
+                is JSONObject -> sc.optString("displayValue", "")
+                null -> ""
+                else -> sc.toString()
+            }
+            val st = c.optJSONObject("status")?.optJSONObject("type")
+            val state = st?.str("state") ?: ""
+            val ms = score(me); val os = score(opp)
+            val result = if (state == "post" && ms.isNotBlank() && os.isNotBlank()) {
+                val a = ms.toDoubleOrNull() ?: 0.0; val b = os.toDoubleOrNull() ?: 0.0
+                when { a > b -> "W"; a < b -> "L"; else -> "T" }
+            } else ""
+            val b = c.optJSONArray("broadcasts")
+            val tv = if (b == null) "" else (0 until b.length()).mapNotNull { j ->
+                b.getJSONObject(j).optJSONObject("media")?.str("shortName")?.ifBlank { null } }.distinct().joinToString(", ")
+            val v = c.optJSONObject("venue")
+            val addr = v?.optJSONObject("address")
+            val city = listOf(addr?.str("city") ?: "", addr?.str("state") ?: "").filter { it.isNotBlank() }.joinToString(", ")
+            val wk = e.optJSONObject("week")
+            val stype = e.optJSONObject("seasonType")?.optInt("type", 0) ?: 0
+            Game(
+                e.str("id"), stype, wk?.optInt("number", 0) ?: 0, wk?.str("text") ?: "",
+                e.str("date"), e.optBoolean("timeValid", c.optBoolean("timeValid", true)) && c.optBoolean("timeValid", true),
+                me.str("homeAway") == "home", ot?.optString("displayName", "") ?: "", ot?.str("abbreviation") ?: "",
+                ot?.optJSONArray("logos")?.optJSONObject(0)?.str("href") ?: "",
+                tv, v?.str("fullName") ?: "", city, state, st?.str("shortDetail") ?: "", ms, os, result
+            )
+        }
+    }
+
+    /** Preseason (1), regular season (2) and postseason (3). Default call returns current season type + byeWeek. */
+    suspend fun schedule(teamId: String): Schedule = withContext(Dispatchers.IO) {
+        val base = "$SITE/teams/$teamId/schedule"
+        val main = get(base)
+        val year = main.optJSONObject("requestedSeason")?.optString("year", "") ?: ""
+        val bye = main.optInt("byeWeek", 0)
+        val q = if (year.isNotBlank()) "&season=$year" else ""
+        val all = mutableListOf<Game>()
+        for (t in 1..3) {
+            val d = try { get("$base?seasontype=$t$q") } catch (e: Exception) { null } ?: continue
+            if (d.optJSONObject("requestedSeason")?.optInt("type", t) != t) continue
+            all += parseGames(teamId, d)
+        }
+        if (all.none { it.seasonType == 2 }) all += parseGames(teamId, main)
+        Schedule(all.distinctBy { it.id }.sortedBy { it.date }, bye, year)
     }
 
     suspend fun roster(teamId: String): List<Player> = withContext(Dispatchers.IO) {

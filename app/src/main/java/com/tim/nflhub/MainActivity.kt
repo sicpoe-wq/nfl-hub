@@ -85,12 +85,18 @@ fun App() {
     var showPicker by remember { mutableStateOf(false) }
     var tab by remember { mutableIntStateOf(0) }
     var selected by remember { mutableStateOf<Player?>(null) }
+    var showLeagueNews by remember { mutableStateOf(false) }
     val (teamsL, retryTeams) = rememberLoad("teams") { Api.teams() }
     val team = (teamsL as? Load.Ok)?.v?.firstOrNull { it.id == teamId }
     val title = team?.name ?: if (teamId == EAGLES_ID) "Philadelphia Eagles" else "NFL Hub"
     if (showSettings) {
         androidx.activity.compose.BackHandler { showSettings = false }
         SettingsScreen(teamsL, retryTeams, { showSettings = false }, { rosterOrder = it }, { defaultTeamId = it })
+        return
+    }
+    if (showLeagueNews) {
+        androidx.activity.compose.BackHandler { showLeagueNews = false }
+        LeagueNewsScreen { showLeagueNews = false }
         return
     }
 
@@ -110,8 +116,8 @@ fun App() {
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = EaglesGreen, titleContentColor = Color.White)
             )
-            TabRow(selectedTabIndex = tab, containerColor = EaglesGreen, contentColor = Color.White) {
-                listOf("News", "Roster", "Stats", "Injuries").forEachIndexed { i, t ->
+            ScrollableTabRow(selectedTabIndex = tab, containerColor = EaglesGreen, contentColor = Color.White, edgePadding = 0.dp) {
+                listOf("News", "Schedule", "Roster", "Stats", "Injuries").forEachIndexed { i, t ->
                     Tab(selected = tab == i, onClick = { tab = i }, text = { Text(t) })
                 }
             }
@@ -120,9 +126,10 @@ fun App() {
         Box(Modifier.padding(pad).fillMaxSize()) {
             key(teamId) {
                 when (tab) {
-                    0 -> NewsTab(teamId)
-                    1 -> RosterTab(teamId, rosterOrder) { selected = it }
-                    2 -> StatsTab(teamId)
+                    0 -> NewsTab(teamId, team?.nickname ?: "")
+                    1 -> ScheduleTab(teamId)
+                    2 -> RosterTab(teamId, rosterOrder) { selected = it }
+                    3 -> StatsTab(teamId)
                     else -> InjuriesTab(teamId) { i -> selected = Player(i.playerId, i.name, i.jersey, i.pos, "", "", "", "", "", i.headshot, i.status, "") }
                 }
             }
@@ -133,6 +140,20 @@ fun App() {
         ModalBottomSheet(onDismissRequest = { showPicker = false }) {
             LoadView(teamsL, retryTeams) { teams ->
                 LazyColumn(Modifier.fillMaxWidth().heightIn(max = 560.dp)) {
+                    item {
+                        Row(
+                            Modifier.fillMaxWidth().clickable { showPicker = false; showLeagueNews = true }.background(Color(0xFFE8F0F1)).padding(16.dp, 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AsyncImage("https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png", null, Modifier.size(36.dp)); Spacer(Modifier.width(14.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("NFL News", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = EaglesGreen)
+                                Text("Top stories from around the league", fontSize = 12.sp, color = Color.Gray)
+                            }
+                            Text("›", fontSize = 24.sp, color = EaglesGreen)
+                        }
+                        HorizontalDivider()
+                    }
                     items(teams) { t ->
                         Row(
                             Modifier.fillMaxWidth().clickable { teamId = t.id; showPicker = false }.padding(16.dp, 10.dp),
@@ -297,31 +318,160 @@ fun Cell(t: String, w: Int, bold: Boolean) =
     Text(t, Modifier.width(w.dp).padding(vertical = 3.dp), fontSize = 12.sp, fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal, maxLines = 1)
 
 fun niceDate(iso: String): String = try {
-    val t = java.time.Instant.parse(iso)
+    val t = parseEspnInstant(iso) ?: throw IllegalArgumentException()
     java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy · h:mm a").withZone(java.time.ZoneId.systemDefault()).format(t)
 } catch (e: Exception) { iso.take(10) }
 
 @Composable
-fun NewsTab(teamId: String) {
-    val ctx = LocalContext.current
-    val (l, retry) = rememberLoad(teamId) { Api.news(teamId) }
+fun NewsTab(teamId: String, nickname: String) {
+    val (l, retry) = rememberLoad(teamId to nickname) { Api.news(teamId, nickname) }
     LoadView(l, retry) { items ->
-        if (items.isEmpty()) { Box(Modifier.fillMaxSize(), Alignment.Center) { Text("No news available") }; return@LoadView }
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(items) { n ->
-                Card(Modifier.fillMaxWidth().clickable {
-                    try { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(n.link)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
-                }, colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
-                    Column {
-                        if (n.image.isNotBlank()) AsyncImage(n.image, null, Modifier.fillMaxWidth().aspectRatio(16f / 9f), contentScale = ContentScale.Crop)
-                        Column(Modifier.padding(12.dp)) {
-                            Text(n.headline, fontWeight = FontWeight.Bold, fontSize = 17.sp)
-                            if (n.description.isNotBlank()) Text(n.description, Modifier.padding(top = 4.dp), fontSize = 13.sp, color = Color.DarkGray, maxLines = 3)
-                            Text(niceDate(n.published), Modifier.padding(top = 6.dp), fontSize = 12.sp, color = Color.Gray)
-                        }
+        if (items.isEmpty()) {
+            Column(Modifier.fillMaxSize().padding(24.dp), Arrangement.Center, Alignment.CenterHorizontally) {
+                Text("No team-specific news right now", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                Text("Check NFL News in the Teams menu for league stories.", fontSize = 13.sp, color = Color.Gray, modifier = Modifier.padding(top = 6.dp))
+                Spacer(Modifier.height(12.dp)); OutlinedButton(onClick = retry) { Text("Refresh") }
+            }
+            return@LoadView
+        }
+        NewsList(items)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LeagueNewsScreen(onBack: () -> Unit) {
+    val (l, retry) = rememberLoad("league-news") { Api.leagueNews() }
+    Scaffold(topBar = {
+        TopAppBar(
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AsyncImage("https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png", null, Modifier.size(32.dp))
+                    Spacer(Modifier.width(8.dp)); Text("NFL News", fontWeight = FontWeight.Bold)
+                }
+            },
+            navigationIcon = { TextButton(onClick = onBack) { Text("‹ Back", color = Color.White) } },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = EaglesGreen, titleContentColor = Color.White)
+        )
+    }) { pad ->
+        Box(Modifier.padding(pad).fillMaxSize()) {
+            LoadView(l, retry) { items ->
+                if (items.isEmpty()) Box(Modifier.fillMaxSize(), Alignment.Center) { Text("No news available") } else NewsList(items)
+            }
+        }
+    }
+}
+
+@Composable
+fun NewsList(items: List<NewsItem>) {
+    val ctx = LocalContext.current
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        items(items) { n ->
+            Card(Modifier.fillMaxWidth().clickable {
+                try { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(n.link)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
+            }, colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(2.dp)) {
+                Column {
+                    if (n.image.isNotBlank()) AsyncImage(n.image, null, Modifier.fillMaxWidth().aspectRatio(16f / 9f), contentScale = ContentScale.Crop)
+                    Column(Modifier.padding(12.dp)) {
+                        Text(n.headline, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                        if (n.description.isNotBlank()) Text(n.description, Modifier.padding(top = 4.dp), fontSize = 13.sp, color = Color.DarkGray, maxLines = 3)
+                        Text(niceDate(n.published), Modifier.padding(top = 6.dp), fontSize = 12.sp, color = Color.Gray)
                     }
                 }
             }
+        }
+    }
+}
+
+/** ESPN dates look like 2026-09-13T20:25Z (no seconds); java.time.Instant.parse needs seconds on older Android. */
+fun parseEspnInstant(iso: String): java.time.Instant? = try {
+    java.time.OffsetDateTime.parse(iso, java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME).toInstant()
+} catch (e: Exception) {
+    try { java.time.Instant.parse(iso) } catch (e2: Exception) {
+        try { java.time.Instant.parse(iso.removeSuffix("Z") + ":00Z") } catch (e3: Exception) { null }
+    }
+}
+
+@Composable
+fun ScheduleTab(teamId: String) {
+    val (l, retry) = rememberLoad(teamId) { Api.schedule(teamId) }
+    LoadView(l, retry) { sch ->
+        if (sch.games.isEmpty()) { Box(Modifier.fillMaxSize(), Alignment.Center) { Text("No schedule available") }; return@LoadView }
+        val zone = java.time.ZoneId.systemDefault()
+        // Build rows: games grouped by season type, with a bye row inserted in the regular season.
+        val sections = listOf(1 to "Preseason", 2 to "Regular Season", 3 to "Postseason")
+        LazyColumn(Modifier.fillMaxSize()) {
+            item {
+                Text("${sch.seasonYear} schedule · times in your time zone (${java.time.ZonedDateTime.now(zone).format(java.time.format.DateTimeFormatter.ofPattern("zzz"))})",
+                    Modifier.padding(16.dp, 10.dp), fontSize = 12.sp, color = Color.Gray)
+            }
+            sections.forEach { (type, label) ->
+                val games = sch.games.filter { it.seasonType == type }
+                val showBye = type == 2 && sch.byeWeek > 0
+                if (games.isEmpty() && !showBye) return@forEach
+                item { Text(label, Modifier.fillMaxWidth().background(Color(0xFFEEEEEE)).padding(16.dp, 8.dp), fontWeight = FontWeight.Bold, color = EaglesGreen) }
+                val rows: List<Any> = if (showBye && games.none { it.weekNum == sch.byeWeek }) {
+                    val before = games.filter { it.weekNum < sch.byeWeek }; val after = games.filter { it.weekNum > sch.byeWeek }
+                    before + listOf("BYE") + after
+                } else games
+                items(rows) { r ->
+                    if (r is Game) GameRow(r, zone) else ByeRow(sch.byeWeek)
+                    HorizontalDivider()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ByeRow(week: Int) {
+    Row(Modifier.fillMaxWidth().background(Color(0xFFFAFAFA)).padding(16.dp, 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("Week $week", Modifier.width(64.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+        Text("BYE WEEK", fontWeight = FontWeight.Bold, color = Color.Gray, letterSpacing = 2.sp)
+    }
+}
+
+@Composable
+fun GameRow(g: Game, zone: java.time.ZoneId) {
+    val inst = parseEspnInstant(g.date)
+    val zdt = inst?.atZone(zone)
+    val dateStr = zdt?.format(java.time.format.DateTimeFormatter.ofPattern("EEE, MMM d")) ?: g.date.take(10)
+    val timeStr = when {
+        g.state == "post" -> ""
+        !g.timeValid || zdt == null -> "Time TBD"
+        else -> zdt.format(java.time.format.DateTimeFormatter.ofPattern("h:mm a zzz"))
+    }
+    val wk = when {
+        g.seasonType == 1 -> "Pre ${g.weekNum}"
+        g.seasonType == 3 -> g.weekText.ifBlank { "Playoffs" }
+        else -> "Week ${g.weekNum}"
+    }
+    Row(Modifier.fillMaxWidth().padding(16.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(wk, Modifier.width(64.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = EaglesGreen, maxLines = 2)
+        Text(if (g.home) "vs" else "@", Modifier.width(24.dp), fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.SemiBold)
+        if (g.oppLogo.isNotBlank()) AsyncImage(g.oppLogo, null, Modifier.size(32.dp)) else Spacer(Modifier.size(32.dp))
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(g.oppName, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1)
+            Text(listOf(dateStr, timeStr).filter { it.isNotBlank() }.joinToString(" · "), fontSize = 12.sp, color = Color.DarkGray)
+            val extra = listOf(g.tv.takeIf { it.isNotBlank() }?.let { "📺 $it" } ?: "",
+                listOf(g.venue, g.venueCity).filter { it.isNotBlank() }.joinToString(", ")).filter { it.isNotBlank() }.joinToString(" · ")
+            if (extra.isNotBlank()) Text(extra, fontSize = 11.sp, color = Color.Gray, maxLines = 2)
+        }
+        when {
+            g.result.isNotBlank() -> Column(horizontalAlignment = Alignment.End) {
+                val c = when (g.result) { "W" -> Color(0xFF2E7D32); "L" -> Color(0xFFC62828); else -> Color(0xFF757575) }
+                Text(g.result, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp,
+                    modifier = Modifier.clip(CircleShape).background(c).padding(8.dp, 2.dp))
+                Text("${g.myScore}-${g.oppScore}", fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp))
+            }
+            g.state == "in" -> Column(horizontalAlignment = Alignment.End) {
+                Text("LIVE", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp,
+                    modifier = Modifier.clip(CircleShape).background(Color(0xFFC62828)).padding(8.dp, 2.dp))
+                if (g.myScore.isNotBlank()) Text("${g.myScore}-${g.oppScore}", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                if (g.statusDetail.isNotBlank()) Text(g.statusDetail, fontSize = 10.sp, color = Color.Gray)
+            }
+            g.state == "post" -> Text(g.statusDetail.ifBlank { "Final" }, fontSize = 12.sp, color = Color.Gray)
         }
     }
 }
