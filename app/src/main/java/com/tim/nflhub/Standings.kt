@@ -232,3 +232,18 @@ private fun SeedRow(seed: String, r: StandingRow, sub: String, tag: String, onTe
     }
     HorizontalDivider(color = Color(0xFFEEEEEE))
 }
+
+@Composable
+fun StandingsBody(onTeam: (String) -> Unit) {
+    val (l, retry) = rememberLoad("standings") { StandingsApi.load() }
+    var tab by remember { mutableIntStateOf(0) }
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth().padding(8.dp, 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            listOf("Divisions", "Playoff Picture").forEachIndexed { i, t ->
+                FilterChip(selected = tab == i, onClick = { tab = i }, label = { Text(t) }, modifier = Modifier.padding(end = 8.dp))
+            }
+            Spacer(Modifier.weight(1f)); TextButton(onClick = retry) { Text("Refresh") }
+        }
+        Box(Modifier.fillMaxSize()) { LoadView(l, retry) { data -> if (tab == 0) DivisionsView(data, onTeam) else PlayoffView(data, onTeam) } }
+    }
+}

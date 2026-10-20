@@ -130,7 +130,7 @@ object GameApi {
 
 @kotlin.OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GameScreen(eventId: String, weekText: String, onBack: () -> Unit) {
+fun GameScreen(eventId: String, weekText: String, onBack: () -> Unit, onTeam: (String) -> Unit = {}) {
     val (l, retry) = rememberLoad("game-$eventId") { GameApi.summary(eventId) }
     val title = (l as? Load.Ok)?.v?.let { "${it.away.abbr} @ ${it.home.abbr}" } ?: "Game"
     Scaffold(topBar = {
@@ -142,13 +142,13 @@ fun GameScreen(eventId: String, weekText: String, onBack: () -> Unit) {
         )
     }) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
-            LoadView(l, retry) { g -> GameBody(g, weekText) }
+            LoadView(l, retry) { g -> GameBody(g, weekText, onTeam) }
         }
     }
 }
 
 @Composable
-private fun GameBody(g: GameSummary, weekText: String) {
+private fun GameBody(g: GameSummary, weekText: String, onTeam: (String) -> Unit) {
     var tab by remember { mutableIntStateOf(0) }
     val teams = listOf(g.away, g.home)
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
@@ -164,6 +164,15 @@ private fun GameBody(g: GameSummary, weekText: String) {
         }
         val t = teams[tab]
         val b = g.box[t.id]
+        Row(Modifier.fillMaxWidth().padding(12.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFE8F0F1)).clickable { onTeam(t.id) }.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            AsyncImage(t.logo, t.name, Modifier.size(56.dp)); Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(t.name, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = EaglesGreen)
+                Text("Tap to open team page", fontSize = 12.sp, color = Color.Gray)
+            }
+            Text("›", fontSize = 26.sp, color = EaglesGreen)
+        }
         if (b == null || (b.teamStats.isEmpty() && b.cats.isEmpty())) {
             Text(if (g.state == "pre") "Box score is available once the game starts." else "ESPN has no box score for this game yet.", Modifier.padding(16.dp), color = Color.Gray)
         } else {

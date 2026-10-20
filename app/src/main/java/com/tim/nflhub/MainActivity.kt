@@ -85,8 +85,7 @@ fun App() {
     var showPicker by remember { mutableStateOf(false) }
     var tab by remember { mutableIntStateOf(0) }
     var selected by remember { mutableStateOf<Player?>(null) }
-    var showLeagueNews by remember { mutableStateOf(false) }
-    var showStandings by remember { mutableStateOf(false) }
+    var nflTab by remember { mutableStateOf<Int?>(null) }
     var openGame by remember { mutableStateOf<Pair<String, String>?>(null) }
     val (teamsL, retryTeams) = rememberLoad("teams") { Api.teams() }
     val team = (teamsL as? Load.Ok)?.v?.firstOrNull { it.id == teamId }
@@ -98,17 +97,12 @@ fun App() {
     }
     openGame?.let { (id, wk) ->
         androidx.activity.compose.BackHandler { openGame = null }
-        GameScreen(id, wk) { openGame = null }
+        GameScreen(id, wk, onBack = { openGame = null }, onTeam = { tid -> teamId = tid; tab = 0; openGame = null; nflTab = null })
         return
     }
-    if (showStandings) {
-        androidx.activity.compose.BackHandler { showStandings = false }
-        StandingsScreen(onBack = { showStandings = false }, onTeam = { teamId = it; showStandings = false })
-        return
-    }
-    if (showLeagueNews) {
-        androidx.activity.compose.BackHandler { showLeagueNews = false }
-        LeagueNewsScreen { showLeagueNews = false }
+    nflTab?.let { nt ->
+        androidx.activity.compose.BackHandler { nflTab = null }
+        NflScreen(nt, { nflTab = it }, onBack = { nflTab = null }, onTeam = { teamId = it; tab = 0; nflTab = null }, onGame = { id, wk -> openGame = id to wk })
         return
     }
 
@@ -154,19 +148,19 @@ fun App() {
                 LazyColumn(Modifier.fillMaxWidth().heightIn(max = 560.dp)) {
                     item {
                         Row(
-                            Modifier.fillMaxWidth().clickable { showPicker = false; showLeagueNews = true }.background(Color(0xFFE8F0F1)).padding(16.dp, 12.dp),
+                            Modifier.fillMaxWidth().clickable { showPicker = false; nflTab = 0 }.background(Color(0xFFE8F0F1)).padding(16.dp, 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             AsyncImage("https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png", null, Modifier.size(36.dp)); Spacer(Modifier.width(14.dp))
                             Column(Modifier.weight(1f)) {
-                                Text("NFL News", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = EaglesGreen)
-                                Text("Top stories from around the league", fontSize = 12.sp, color = Color.Gray)
+                                Text("NFL", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = EaglesGreen)
+                                Text("League news, weekly scores & standings", fontSize = 12.sp, color = Color.Gray)
                             }
                             Text("›", fontSize = 24.sp, color = EaglesGreen)
                         }
                         HorizontalDivider()
                         Row(
-                            Modifier.fillMaxWidth().clickable { showPicker = false; showStandings = true }.background(Color(0xFFE8F0F1)).padding(16.dp, 12.dp),
+                            Modifier.fillMaxWidth().clickable { showPicker = false; nflTab = 2 }.background(Color(0xFFE8F0F1)).padding(16.dp, 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(Modifier.size(36.dp), Alignment.Center) { Text("🏆", fontSize = 24.sp) }; Spacer(Modifier.width(14.dp))
@@ -364,23 +358,33 @@ fun NewsTab(teamId: String, nickname: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LeagueNewsScreen(onBack: () -> Unit) {
+fun NflScreen(startTab: Int, onTabChange: (Int) -> Unit, onBack: () -> Unit, onTeam: (String) -> Unit, onGame: (String, String) -> Unit) {
     val (l, retry) = rememberLoad("league-news") { Api.leagueNews() }
+    val tab = startTab
     Scaffold(topBar = {
-        TopAppBar(
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    AsyncImage("https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png", null, Modifier.size(32.dp))
-                    Spacer(Modifier.width(8.dp)); Text("NFL News", fontWeight = FontWeight.Bold)
-                }
-            },
-            navigationIcon = { TextButton(onClick = onBack) { Text("‹ Back", color = Color.White) } },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = EaglesGreen, titleContentColor = Color.White)
-        )
+        Column {
+            TopAppBar(
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        AsyncImage("https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png", null, Modifier.size(32.dp))
+                        Spacer(Modifier.width(8.dp)); Text("NFL", fontWeight = FontWeight.Bold)
+                    }
+                },
+                navigationIcon = { TextButton(onClick = onBack) { Text("‹ Back", color = Color.White) } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = EaglesGreen, titleContentColor = Color.White)
+            )
+            TabRow(selectedTabIndex = tab, containerColor = EaglesGreen, contentColor = Color.White) {
+                listOf("News", "Scores", "Standings").forEachIndexed { i, t -> Tab(selected = tab == i, onClick = { onTabChange(i) }, text = { Text(t) }) }
+            }
+        }
     }) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
-            LoadView(l, retry) { items ->
-                if (items.isEmpty()) Box(Modifier.fillMaxSize(), Alignment.Center) { Text("No news available") } else NewsList(items)
+            when (tab) {
+                0 -> LoadView(l, retry) { items ->
+                    if (items.isEmpty()) Box(Modifier.fillMaxSize(), Alignment.Center) { Text("No news available") } else NewsList(items)
+                }
+                1 -> ScoresTab(onGame)
+                else -> StandingsBody(onTeam)
             }
         }
     }
