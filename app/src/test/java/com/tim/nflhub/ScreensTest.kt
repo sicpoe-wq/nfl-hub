@@ -99,7 +99,7 @@ class ScreensTest {
             Box(Modifier.fillMaxSize()) {
                 Column(Modifier.fillMaxSize()) {
                     LeagueBanner(onHome = {}, onTeams = {}, onSettings = {}, insets = fakeInsets)
-                    IconTabs(0, NFL_TABS, EaglesGreen) {}
+                    LeagueTabs(0) {}
                     news.take(3).forEach { Text(it.headline, Modifier.padding(12.dp), maxLines = 2); HorizontalDivider() }
                 }
                 FakeStatusBar()
@@ -115,7 +115,7 @@ class ScreensTest {
         rows.forEach { img(it.headshot) }
         shot(name) {
             Column(Modifier.fillMaxSize()) {
-                IconTabs(3, NFL_TABS, EaglesGreen) {}
+                LeagueTabs(3) {}
                 ModeChips(mode) {}
                 if (mode == 1) OutlinedButton(onClick = {}, Modifier.padding(horizontal = 12.dp)) { Text("Season: $year ▾") }
                 CategoryChips(cats, key) {}

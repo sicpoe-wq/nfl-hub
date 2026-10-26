@@ -327,7 +327,7 @@ fun NflScreen(startTab: Int, onTabChange: (Int) -> Unit, onBack: () -> Unit, onT
     Scaffold(topBar = {
         Column {
             LeagueBanner(onHome = onBack, onTeams = onTeams, onSettings = onSettings)
-            IconTabs(tab, NFL_TABS, EaglesGreen, onTabChange)
+            LeagueTabs(tab, onTabChange)
         }
     }) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {

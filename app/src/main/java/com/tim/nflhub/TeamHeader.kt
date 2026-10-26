@@ -31,6 +31,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material3.TabRowDefaults
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -273,9 +275,23 @@ fun TeamTabs(tab: Int, team: Team?, onTab: (Int) -> Unit) {
     IconTabs(tab, TEAM_TABS, lerp(c1, Color.Black, 0.25f), onTab)
 }
 
+/** League tab bar: the League banner's navy-to-red gradient, darkened the same 25% the team tab bars use. */
+val LeagueTabBrush: Brush = Brush.horizontalGradient(
+    listOf(NflNavy, Color(0xFF0B2A5B), NflRed).map { lerp(it, Color.Black, 0.25f) })
+
 @Composable
-fun IconTabs(tab: Int, tabs: List<Pair<String, ImageVector>>, bg: Color, onTab: (Int) -> Unit) {
-    TabRow(selectedTabIndex = tab, containerColor = bg, contentColor = Color.White) {
+fun LeagueTabs(tab: Int, onTab: (Int) -> Unit) = IconTabs(tab, NFL_TABS, Color.Transparent, onTab, LeagueTabBrush)
+
+@Composable
+fun IconTabs(tab: Int, tabs: List<Pair<String, ImageVector>>, bg: Color, onTab: (Int) -> Unit, brush: Brush? = null) {
+    TabRow(selectedTabIndex = tab, containerColor = bg, contentColor = Color.White,
+        modifier = if (brush != null) Modifier.background(brush) else Modifier,
+        indicator = { pos ->
+            if (tab < pos.size) {
+                if (brush != null) TabRowDefaults.SecondaryIndicator(Modifier.tabIndicatorOffset(pos[tab]), height = 3.dp, color = Color.White)
+                else TabRowDefaults.SecondaryIndicator(Modifier.tabIndicatorOffset(pos[tab]))
+            }
+        }) {
         tabs.forEachIndexed { i, (label, icon) ->
             Tab(selected = tab == i, onClick = { onTab(i) }, unselectedContentColor = Color.White.copy(alpha = 0.7f)) {
                 Column(Modifier.padding(vertical = 7.dp), horizontalAlignment = Alignment.CenterHorizontally) {
