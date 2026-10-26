@@ -7,7 +7,10 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-data class Team(val id: String, val name: String, val abbr: String, val logo: String, val color: String, val nickname: String = "")
+data class Team(val id: String, val name: String, val abbr: String, val logo: String, val color: String, val nickname: String = "",
+                val altColor: String = "", val location: String = "")
+/** Banner detail line from ESPN /teams/{id}: overall record (e.g. "2-4") and standing (e.g. "2nd in NFC East"). */
+data class TeamHeader(val record: String, val standing: String)
 data class Player(
     val id: String, val name: String, val jersey: String, val pos: String, val group: String,
     val height: String, val weight: String, val age: String, val college: String,
@@ -42,7 +45,7 @@ object Api {
     internal fun get(url: String): JSONObject {
         val c = URL(url).openConnection() as HttpURLConnection
         c.connectTimeout = 15000; c.readTimeout = 20000
-        c.setRequestProperty("User-Agent", "NflHub/1.5")
+        c.setRequestProperty("User-Agent", "NflHub/1.7")
         try {
             if (c.responseCode != 200) throw RuntimeException("HTTP ${c.responseCode}")
             return JSONObject(c.inputStream.bufferedReader().readText())
@@ -58,8 +61,14 @@ object Api {
             val t = arr.getJSONObject(it).getJSONObject("team")
             val logos = t.optJSONArray("logos")
             Team(t.str("id"), t.str("displayName"), t.str("abbreviation"),
-                logos?.optJSONObject(0)?.str("href") ?: "", t.str("color"), t.optString("name", t.str("shortDisplayName")))
+                logos?.optJSONObject(0)?.str("href") ?: "", t.str("color"), t.optString("name", t.str("shortDisplayName")),
+                t.str("alternateColor"), t.str("location"))
         }.sortedBy { it.name }
+    }
+
+    suspend fun teamHeader(teamId: String): TeamHeader = withContext(Dispatchers.IO) {
+        val t = get("$SITE/teams/$teamId").getJSONObject("team")
+        TeamHeader(t.optJSONObject("record")?.optJSONArray("items")?.optJSONObject(0)?.str("summary") ?: "", t.str("standingSummary"))
     }
 
     private fun parseNews(arr: JSONArray?, keep: (JSONObject) -> Boolean = { true }): List<NewsItem> {

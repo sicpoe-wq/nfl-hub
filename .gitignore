@@ -2,3 +2,5 @@ build/
 .gradle/
 *.apk
 local.properties
+app/src/test/snapshots/
+screens/

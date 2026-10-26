@@ -106,83 +106,32 @@ fun App() {
         return
     }
 
-    Scaffold(topBar = {
-        Column {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (team != null) AsyncImage(team.logo, null, Modifier.size(32.dp))
-                        Spacer(Modifier.width(8.dp)); Text(title, fontWeight = FontWeight.Bold)
+    val (hdrL, _) = rememberLoad("hdr-$teamId") { Api.teamHeader(teamId) }
+    Box(Modifier.fillMaxSize()) {
+        Scaffold(topBar = {
+            Column {
+                TopBoxes(team, teamId != defaultTeamId, showPicker, onLeague = { showPicker = false; nflTab = 0 },
+                    onTeams = { showPicker = !showPicker }, onHome = { showPicker = false; teamId = defaultTeamId; tab = 0 },
+                    onSettings = { showPicker = false; showSettings = true })
+                TeamBanner(team, (hdrL as? Load.Ok)?.v, title)
+                TeamTabs(tab, team) { tab = it }
+            }
+        }) { pad ->
+            Box(Modifier.padding(pad).fillMaxSize()) {
+                key(teamId) {
+                    when (tab) {
+                        0 -> NewsTab(teamId, team?.nickname ?: "")
+                        1 -> ScheduleTab(teamId) { g -> openGame = g.id to scheduleWeekLabel(g) }
+                        2 -> RosterTab(teamId, rosterOrder) { selected = it }
+                        3 -> StatsTab(teamId)
+                        else -> InjuriesTab(teamId) { i -> selected = Player(i.playerId, i.name, i.jersey, i.pos, "", "", "", "", "", i.headshot, i.status, "") }
                     }
-                },
-                actions = {
-                    if (teamId != defaultTeamId) TextButton(onClick = { teamId = defaultTeamId }) { Text("🏠 Home", color = Color.White) }
-                    TextButton(onClick = { showPicker = true }) { Text("Teams ▾", color = Color.White) }
-                    IconButton(onClick = { showSettings = true }) { Icon(Icons.Default.Settings, "Settings", tint = Color.White) }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = EaglesGreen, titleContentColor = Color.White)
-            )
-            ScrollableTabRow(selectedTabIndex = tab, containerColor = EaglesGreen, contentColor = Color.White, edgePadding = 0.dp) {
-                listOf("News", "Schedule", "Roster", "Stats", "Injuries").forEachIndexed { i, t ->
-                    Tab(selected = tab == i, onClick = { tab = i }, text = { Text(t) })
                 }
             }
         }
-    }) { pad ->
-        Box(Modifier.padding(pad).fillMaxSize()) {
-            key(teamId) {
-                when (tab) {
-                    0 -> NewsTab(teamId, team?.nickname ?: "")
-                    1 -> ScheduleTab(teamId) { g -> openGame = g.id to scheduleWeekLabel(g) }
-                    2 -> RosterTab(teamId, rosterOrder) { selected = it }
-                    3 -> StatsTab(teamId)
-                    else -> InjuriesTab(teamId) { i -> selected = Player(i.playerId, i.name, i.jersey, i.pos, "", "", "", "", "", i.headshot, i.status, "") }
-                }
-            }
-        }
-    }
-
-    if (showPicker) {
-        ModalBottomSheet(onDismissRequest = { showPicker = false }) {
-            LoadView(teamsL, retryTeams) { teams ->
-                LazyColumn(Modifier.fillMaxWidth().heightIn(max = 560.dp)) {
-                    item {
-                        Row(
-                            Modifier.fillMaxWidth().clickable { showPicker = false; nflTab = 0 }.background(Color(0xFFE8F0F1)).padding(16.dp, 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            AsyncImage("https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png", null, Modifier.size(36.dp)); Spacer(Modifier.width(14.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text("NFL", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = EaglesGreen)
-                                Text("League news, weekly scores & standings", fontSize = 12.sp, color = Color.Gray)
-                            }
-                            Text("›", fontSize = 24.sp, color = EaglesGreen)
-                        }
-                        HorizontalDivider()
-                        Row(
-                            Modifier.fillMaxWidth().clickable { showPicker = false; nflTab = 2 }.background(Color(0xFFE8F0F1)).padding(16.dp, 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(Modifier.size(36.dp), Alignment.Center) { Text("🏆", fontSize = 24.sp) }; Spacer(Modifier.width(14.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text("Standings", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = EaglesGreen)
-                                Text("Division standings & playoff picture", fontSize = 12.sp, color = Color.Gray)
-                            }
-                            Text("›", fontSize = 24.sp, color = EaglesGreen)
-                        }
-                        HorizontalDivider()
-                    }
-                    items(teams) { t ->
-                        Row(
-                            Modifier.fillMaxWidth().clickable { teamId = t.id; showPicker = false }.padding(16.dp, 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            AsyncImage(t.logo, null, Modifier.size(36.dp)); Spacer(Modifier.width(14.dp))
-                            Text(t.name, fontSize = 17.sp, fontWeight = if (t.id == teamId) FontWeight.Bold else FontWeight.Normal)
-                        }
-                    }
-                }
-            }
+        if (showPicker) {
+            androidx.activity.compose.BackHandler { showPicker = false }
+            TeamsDropdown(teamsL, retryTeams, teamId, onPick = { teamId = it; tab = 0; showPicker = false }, onDismiss = { showPicker = false })
         }
     }
 
@@ -201,9 +150,11 @@ fun statusColor(s: String): Color = when {
 }
 
 @Composable
-fun Headshot(url: String, size: Int = 48) {
-    Box(Modifier.size(size.dp).clip(CircleShape).background(Color(0xFFE0E0E0))) {
-        if (url.isNotBlank()) AsyncImage(url, null, Modifier.fillMaxSize())
+fun Headshot(url: String, size: Int = 48, name: String = "") {
+    Box(Modifier.size(size.dp).clip(CircleShape).background(Color(0xFFE0E0E0)), Alignment.Center) {
+        if (name.isNotBlank()) Text(name.split(" ").filter { it.isNotBlank() }.let { w -> (w.firstOrNull()?.take(1) ?: "") + (w.drop(1).lastOrNull()?.take(1) ?: "") }.uppercase(),
+            fontWeight = FontWeight.Bold, color = Color(0xFF757575), fontSize = (size / 3).sp)
+        if (url.isNotBlank()) NetImage(url, Modifier.fillMaxSize(), ContentScale.Crop)
     }
 }
 
@@ -347,7 +298,7 @@ fun NewsTab(teamId: String, nickname: String) {
         if (items.isEmpty()) {
             Column(Modifier.fillMaxSize().padding(24.dp), Arrangement.Center, Alignment.CenterHorizontally) {
                 Text("No team-specific news right now", fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-                Text("Check NFL News in the Teams menu for league stories.", fontSize = 13.sp, color = Color.Gray, modifier = Modifier.padding(top = 6.dp))
+                Text("Tap \"The League\" at the top for league stories.", fontSize = 13.sp, color = Color.Gray, modifier = Modifier.padding(top = 6.dp))
                 Spacer(Modifier.height(12.dp)); OutlinedButton(onClick = retry) { Text("Refresh") }
             }
             return@LoadView
@@ -361,6 +312,8 @@ fun NewsTab(teamId: String, nickname: String) {
 fun NflScreen(startTab: Int, onTabChange: (Int) -> Unit, onBack: () -> Unit, onTeam: (String) -> Unit, onGame: (String, String) -> Unit) {
     val (l, retry) = rememberLoad("league-news") { Api.leagueNews() }
     val tab = startTab
+    var selPlayer by remember { mutableStateOf<Player?>(null) }
+    selPlayer?.let { p -> ModalBottomSheet(onDismissRequest = { selPlayer = null }) { PlayerSheet(p) } }
     Scaffold(topBar = {
         Column {
             TopAppBar(
@@ -373,9 +326,7 @@ fun NflScreen(startTab: Int, onTabChange: (Int) -> Unit, onBack: () -> Unit, onT
                 navigationIcon = { TextButton(onClick = onBack) { Text("‹ Back", color = Color.White) } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = EaglesGreen, titleContentColor = Color.White)
             )
-            TabRow(selectedTabIndex = tab, containerColor = EaglesGreen, contentColor = Color.White) {
-                listOf("News", "Scores", "Standings").forEachIndexed { i, t -> Tab(selected = tab == i, onClick = { onTabChange(i) }, text = { Text(t) }) }
-            }
+            IconTabs(tab, NFL_TABS, EaglesGreen, onTabChange)
         }
     }) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
@@ -384,7 +335,8 @@ fun NflScreen(startTab: Int, onTabChange: (Int) -> Unit, onBack: () -> Unit, onT
                     if (items.isEmpty()) Box(Modifier.fillMaxSize(), Alignment.Center) { Text("No news available") } else NewsList(items)
                 }
                 1 -> ScoresTab(onGame)
-                else -> StandingsBody(onTeam)
+                2 -> StandingsBody(onTeam)
+                else -> LeadersTab { selPlayer = it }
             }
         }
     }
@@ -478,7 +430,7 @@ fun GameRow(g: Game, zone: java.time.ZoneId, onGame: (Game) -> Unit = {}) {
     Row(Modifier.fillMaxWidth().then(if (tappable) Modifier.clickable { onGame(g) } else Modifier).padding(16.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(wk, Modifier.width(64.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = EaglesGreen, maxLines = 2)
         Text(if (g.home) "vs" else "@", Modifier.width(24.dp), fontSize = 13.sp, color = Color.Gray, fontWeight = FontWeight.SemiBold)
-        if (g.oppLogo.isNotBlank()) AsyncImage(g.oppLogo, null, Modifier.size(32.dp)) else Spacer(Modifier.size(32.dp))
+        if (g.oppLogo.isNotBlank()) NetImage(g.oppLogo, Modifier.size(32.dp)) else Spacer(Modifier.size(32.dp))
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(g.oppName, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1)

@@ -1,0 +1,427 @@
+{
+ "note": "Bundled because ESPN's career leaders feed has no receiving-yards or receiving-TD category. Generated from the cited Wikipedia revisions; not live.",
+ "categories": [
+  {
+   "key": "receivingYards",
+   "label": "Receiving Yards",
+   "abbr": "YDS",
+   "source": "Wikipedia: List of NFL career receiving yards leaders",
+   "url": "https://en.wikipedia.org/wiki/List_of_NFL_career_receiving_yards_leaders",
+   "revid": 1381309772,
+   "asOf": "2026-10-21",
+   "leaders": [
+    {
+     "rank": "1",
+     "name": "Jerry Rice",
+     "active": false,
+     "team": "Seattle Seahawks",
+     "value": "22,895",
+     "espnId": "12"
+    },
+    {
+     "rank": "2",
+     "name": "Larry Fitzgerald",
+     "active": false,
+     "team": "Arizona Cardinals",
+     "value": "17,492",
+     "espnId": "5528"
+    },
+    {
+     "rank": "3",
+     "name": "Terrell Owens",
+     "active": false,
+     "team": "Cincinnati Bengals",
+     "value": "15,934",
+     "espnId": "1056"
+    },
+    {
+     "rank": "4",
+     "name": "Randy Moss",
+     "active": false,
+     "team": "San Francisco 49ers",
+     "value": "15,292",
+     "espnId": "1433"
+    },
+    {
+     "rank": "5",
+     "name": "Isaac Bruce",
+     "active": false,
+     "team": "San Francisco 49ers",
+     "value": "15,208",
+     "espnId": "658"
+    },
+    {
+     "rank": "6",
+     "name": "Tony Gonzalez",
+     "active": false,
+     "team": "Atlanta Falcons",
+     "value": "15,127",
+     "espnId": "1231"
+    },
+    {
+     "rank": "7",
+     "name": "Tim Brown",
+     "active": false,
+     "team": "Tampa Bay Buccaneers",
+     "value": "14,934",
+     "espnId": "16"
+    },
+    {
+     "rank": "8",
+     "name": "Steve Smith Sr.",
+     "active": false,
+     "team": "Baltimore Ravens",
+     "value": "14,731",
+     "espnId": "2622"
+    },
+    {
+     "rank": "9",
+     "name": "Marvin Harrison",
+     "active": false,
+     "team": "Indianapolis Colts",
+     "value": "14,580",
+     "espnId": "939"
+    },
+    {
+     "rank": "10",
+     "name": "Reggie Wayne",
+     "active": false,
+     "team": "Indianapolis Colts",
+     "value": "14,345",
+     "espnId": "2578"
+    },
+    {
+     "rank": "11",
+     "name": "Andre Johnson",
+     "active": false,
+     "team": "Tennessee Titans",
+     "value": "14,185",
+     "espnId": "4461"
+    },
+    {
+     "rank": "12",
+     "name": "James Lofton",
+     "active": false,
+     "team": "Philadelphia Eagles",
+     "value": "14,004",
+     "espnId": ""
+    },
+    {
+     "rank": "13",
+     "name": "Cris Carter",
+     "active": false,
+     "team": "Miami Dolphins",
+     "value": "13,899",
+     "espnId": "10"
+    },
+    {
+     "rank": "14",
+     "name": "Anquan Boldin",
+     "active": false,
+     "team": "Detroit Lions",
+     "value": "13,779",
+     "espnId": "4512"
+    },
+    {
+     "rank": "15",
+     "name": "Henry Ellard",
+     "active": false,
+     "team": "New England Patriots",
+     "value": "13,777",
+     "espnId": ""
+    },
+    {
+     "rank": "16",
+     "name": "Julio Jones",
+     "active": false,
+     "team": "Philadelphia Eagles",
+     "value": "13,703",
+     "espnId": "13982"
+    },
+    {
+     "rank": "17",
+     "name": "Mike Evans",
+     "active": true,
+     "team": "San Francisco 49ers",
+     "value": "13,472",
+     "espnId": "16737"
+    },
+    {
+     "rank": "18",
+     "name": "Torry Holt",
+     "active": false,
+     "team": "Jacksonville Jaguars",
+     "value": "13,382",
+     "espnId": "1757"
+    },
+    {
+     "rank": "19",
+     "name": "Travis Kelce",
+     "active": true,
+     "team": "Kansas City Chiefs",
+     "value": "13,301",
+     "espnId": "15847"
+    },
+    {
+     "rank": "20",
+     "name": "DeAndre Hopkins",
+     "active": false,
+     "team": "Baltimore Ravens",
+     "value": "13,295",
+     "espnId": "15795"
+    },
+    {
+     "rank": "21",
+     "name": "Andre Reed",
+     "active": false,
+     "team": "Washington Redskins",
+     "value": "13,198",
+     "espnId": "6"
+    },
+    {
+     "rank": "22",
+     "name": "Davante Adams",
+     "active": true,
+     "team": "Los Angeles Rams",
+     "value": "13,113",
+     "espnId": "16800"
+    },
+    {
+     "rank": "23",
+     "name": "Steve Largent",
+     "active": false,
+     "team": "Seattle Seahawks",
+     "value": "13,089",
+     "espnId": ""
+    },
+    {
+     "rank": "24",
+     "name": "Jason Witten",
+     "active": false,
+     "team": "Las Vegas Raiders",
+     "value": "13,046",
+     "espnId": "4527"
+    },
+    {
+     "rank": "25",
+     "name": "Irving Fryar",
+     "active": false,
+     "team": "Washington Redskins",
+     "value": "12,785",
+     "espnId": ""
+    }
+   ]
+  },
+  {
+   "key": "receivingTouchdowns",
+   "label": "Receiving Touchdowns",
+   "abbr": "TD",
+   "source": "Wikipedia: List of NFL career receiving touchdowns leaders",
+   "url": "https://en.wikipedia.org/wiki/List_of_NFL_career_receiving_touchdowns_leaders",
+   "revid": 1381309964,
+   "asOf": "2026-10-21",
+   "leaders": [
+    {
+     "rank": "1",
+     "name": "Jerry Rice",
+     "active": false,
+     "team": "Seattle Seahawks",
+     "value": "197",
+     "espnId": "12"
+    },
+    {
+     "rank": "2",
+     "name": "Randy Moss",
+     "active": false,
+     "team": "San Francisco 49ers",
+     "value": "156",
+     "espnId": "1433"
+    },
+    {
+     "rank": "3",
+     "name": "Terrell Owens",
+     "active": false,
+     "team": "Cincinnati Bengals",
+     "value": "153",
+     "espnId": "1056"
+    },
+    {
+     "rank": "4",
+     "name": "Cris Carter",
+     "active": false,
+     "team": "Miami Dolphins",
+     "value": "130",
+     "espnId": "10"
+    },
+    {
+     "rank": "5",
+     "name": "Marvin Harrison",
+     "active": false,
+     "team": "Indianapolis Colts",
+     "value": "128",
+     "espnId": "939"
+    },
+    {
+     "rank": "6",
+     "name": "Larry Fitzgerald",
+     "active": false,
+     "team": "Arizona Cardinals",
+     "value": "121",
+     "espnId": "5528"
+    },
+    {
+     "rank": "7",
+     "name": "Davante Adams",
+     "active": true,
+     "team": "Los Angeles Rams",
+     "value": "121",
+     "espnId": "16800"
+    },
+    {
+     "rank": "8",
+     "name": "Antonio Gates",
+     "active": false,
+     "team": "San Diego/Los Angeles Chargers",
+     "value": "116",
+     "espnId": "5362"
+    },
+    {
+     "rank": "9",
+     "name": "Tony Gonzalez",
+     "active": false,
+     "team": "Atlanta Falcons",
+     "value": "111",
+     "espnId": "1231"
+    },
+    {
+     "rank": "10",
+     "name": "Mike Evans",
+     "active": true,
+     "team": "San Francisco 49ers",
+     "value": "111",
+     "espnId": "16737"
+    },
+    {
+     "rank": "11",
+     "name": "Tim Brown",
+     "active": false,
+     "team": "Tampa Bay Buccaneers",
+     "value": "100",
+     "espnId": "16"
+    },
+    {
+     "rank": "11",
+     "name": "Steve Largent",
+     "active": false,
+     "team": "Seattle Seahawks",
+     "value": "100",
+     "espnId": ""
+    },
+    {
+     "rank": "13",
+     "name": "Don Hutson",
+     "active": false,
+     "team": "Green Bay Packers",
+     "value": "99",
+     "espnId": ""
+    },
+    {
+     "rank": "14",
+     "name": "Rob Gronkowski",
+     "active": false,
+     "team": "Tampa Bay Buccaneers",
+     "value": "92",
+     "espnId": "13229"
+    },
+    {
+     "rank": "15",
+     "name": "Isaac Bruce",
+     "active": false,
+     "team": "San Francisco 49ers",
+     "value": "91",
+     "espnId": "658"
+    },
+    {
+     "rank": "16",
+     "name": "Jimmy Graham",
+     "active": false,
+     "team": "Chicago Bears",
+     "value": "89",
+     "espnId": "13232"
+    },
+    {
+     "rank": "17",
+     "name": "Don Maynard",
+     "active": false,
+     "team": "St. Louis Cardinals",
+     "value": "88",
+     "espnId": ""
+    },
+    {
+     "rank": "18",
+     "name": "Andre Reed",
+     "active": false,
+     "team": "Washington Redskins",
+     "value": "87",
+     "espnId": "6"
+    },
+    {
+     "rank": "19",
+     "name": "Lance Alworth",
+     "active": false,
+     "team": "Dallas Cowboys",
+     "value": "85",
+     "espnId": ""
+    },
+    {
+     "rank": "19",
+     "name": "DeAndre Hopkins",
+     "active": false,
+     "team": "Baltimore Ravens",
+     "value": "85",
+     "espnId": "15795"
+    },
+    {
+     "rank": "19",
+     "name": "Hines Ward",
+     "active": false,
+     "team": "Pittsburgh Steelers",
+     "value": "85",
+     "espnId": "1494"
+    },
+    {
+     "rank": "19",
+     "name": "Paul Warfield",
+     "active": false,
+     "team": "Miami Dolphins",
+     "value": "85",
+     "espnId": ""
+    },
+    {
+     "rank": "23",
+     "name": "Mark Clayton",
+     "active": false,
+     "team": "Green Bay Packers",
+     "value": "84",
+     "espnId": ""
+    },
+    {
+     "rank": "23",
+     "name": "Irving Fryar",
+     "active": false,
+     "team": "Washington Redskins",
+     "value": "84",
+     "espnId": ""
+    },
+    {
+     "rank": "23",
+     "name": "Tommy McDonald",
+     "active": false,
+     "team": "Cleveland Browns",
+     "value": "84",
+     "espnId": ""
+    }
+   ]
+  }
+ ]
+}
