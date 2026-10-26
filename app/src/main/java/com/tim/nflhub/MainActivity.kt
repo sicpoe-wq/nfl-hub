@@ -2,7 +2,11 @@ package com.tim.nflhub
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -35,6 +39,8 @@ const val EAGLES_ID = "21"
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Draw behind the system bars (photo banner goes under the status bar); light status-bar icons over the dark banner.
+        enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT))
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme(colorScheme = lightColorScheme(primary = EaglesGreen, secondary = EaglesSilver)) {
@@ -83,6 +89,7 @@ fun App() {
     var showSettings by remember { mutableStateOf(false) }
     var rosterOrder by remember { mutableStateOf(Prefs.rosterOrder(ctx)) }
     var showPicker by remember { mutableStateOf(false) }
+    var bannerPx by remember { mutableIntStateOf(0) }
     var tab by remember { mutableIntStateOf(0) }
     var selected by remember { mutableStateOf<Player?>(null) }
     var nflTab by remember { mutableStateOf<Int?>(null) }
@@ -102,7 +109,8 @@ fun App() {
     }
     nflTab?.let { nt ->
         androidx.activity.compose.BackHandler { nflTab = null }
-        NflScreen(nt, { nflTab = it }, onBack = { nflTab = null }, onTeam = { teamId = it; tab = 0; nflTab = null }, onGame = { id, wk -> openGame = id to wk })
+        NflScreen(nt, { nflTab = it }, onBack = { nflTab = null }, onTeam = { teamId = it; tab = 0; nflTab = null }, onGame = { id, wk -> openGame = id to wk },
+            onTeams = { nflTab = null; showPicker = true }, onSettings = { showSettings = true })
         return
     }
 
@@ -110,10 +118,10 @@ fun App() {
     Box(Modifier.fillMaxSize()) {
         Scaffold(topBar = {
             Column {
-                TopBoxes(team, teamId != defaultTeamId, showPicker, onLeague = { showPicker = false; nflTab = 0 },
-                    onTeams = { showPicker = !showPicker }, onHome = { showPicker = false; teamId = defaultTeamId; tab = 0 },
-                    onSettings = { showPicker = false; showSettings = true })
-                TeamBanner(team, (hdrL as? Load.Ok)?.v, title)
+                TeamBanner(team, (hdrL as? Load.Ok)?.v, title, showHome = teamId != defaultTeamId, teamsOpen = showPicker,
+                    onLeague = { showPicker = false; nflTab = 0 }, onTeams = { showPicker = !showPicker },
+                    onHome = { showPicker = false; teamId = defaultTeamId; tab = 0 }, onSettings = { showPicker = false; showSettings = true },
+                    modifier = Modifier.onSizeChanged { bannerPx = it.height })
                 TeamTabs(tab, team) { tab = it }
             }
         }) { pad ->
@@ -131,7 +139,8 @@ fun App() {
         }
         if (showPicker) {
             androidx.activity.compose.BackHandler { showPicker = false }
-            TeamsDropdown(teamsL, retryTeams, teamId, onPick = { teamId = it; tab = 0; showPicker = false }, onDismiss = { showPicker = false })
+            TeamsDropdown(teamsL, retryTeams, teamId, onPick = { teamId = it; tab = 0; showPicker = false }, onDismiss = { showPicker = false },
+                topOffset = with(LocalDensity.current) { bannerPx.toDp() })
         }
     }
 
@@ -309,23 +318,15 @@ fun NewsTab(teamId: String, nickname: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NflScreen(startTab: Int, onTabChange: (Int) -> Unit, onBack: () -> Unit, onTeam: (String) -> Unit, onGame: (String, String) -> Unit) {
+fun NflScreen(startTab: Int, onTabChange: (Int) -> Unit, onBack: () -> Unit, onTeam: (String) -> Unit, onGame: (String, String) -> Unit,
+              onTeams: () -> Unit = onBack, onSettings: (() -> Unit)? = null) {
     val (l, retry) = rememberLoad("league-news") { Api.leagueNews() }
     val tab = startTab
     var selPlayer by remember { mutableStateOf<Player?>(null) }
     selPlayer?.let { p -> ModalBottomSheet(onDismissRequest = { selPlayer = null }) { PlayerSheet(p) } }
     Scaffold(topBar = {
         Column {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        AsyncImage("https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png", null, Modifier.size(32.dp))
-                        Spacer(Modifier.width(8.dp)); Text("NFL", fontWeight = FontWeight.Bold)
-                    }
-                },
-                navigationIcon = { TextButton(onClick = onBack) { Text("‹ Back", color = Color.White) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = EaglesGreen, titleContentColor = Color.White)
-            )
+            LeagueBanner(onHome = onBack, onTeams = onTeams, onSettings = onSettings)
             IconTabs(tab, NFL_TABS, EaglesGreen, onTabChange)
         }
     }) { pad ->

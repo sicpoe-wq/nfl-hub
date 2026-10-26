@@ -1,0 +1,482 @@
+[
+ {
+  "id": "22",
+  "abbr": "ARI",
+  "team": "Arizona Cardinals",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/22 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/3970.jpg",
+  "file": "team_photos/ari.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium State Farm Stadium",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "1",
+  "abbr": "ATL",
+  "team": "Atlanta Falcons",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/1 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/interior/5348.jpg",
+  "file": "team_photos/atl.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium Mercedes-Benz Stadium",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "33",
+  "abbr": "BAL",
+  "team": "Baltimore Ravens",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/33 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/3814.jpg",
+  "file": "team_photos/bal.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium M&T Bank Stadium",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "2",
+  "abbr": "BUF",
+  "team": "Buffalo Bills",
+  "kind": "team_photo_day_2025",
+  "season": 2025,
+  "sourcePage": "https://www.buffalobills.com/photos/photos-a-candid-look-at-buffalo-bills-team-photo-day",
+  "imageUrl": "https://static.clubs.nfl.com/image/upload/w_1600,c_limit,q_90/bills/w9caedxmjfc7darfn0dm.jpg",
+  "file": "team_photos/buf.jpg",
+  "note": "Gallery caption: \"Buffalo Bills team photo, September 27, 2025\" (section of full-team pose)",
+  "size": [
+   1280,
+   854
+  ]
+ },
+ {
+  "id": "29",
+  "abbr": "CAR",
+  "team": "Carolina Panthers",
+  "kind": "older_team_photo",
+  "season": 2019,
+  "sourcePage": "https://www.panthers.com/photos/behind-the-scenes-at-panthers-photo-day",
+  "imageUrl": "https://static.clubs.nfl.com/image/private/w_1600,c_limit,q_90/panthers/x2oa2i5qaufvjhrdf7pa.jpg",
+  "file": "team_photos/car.jpg",
+  "note": "Fallback 1: most recent full-team photo found \u2014 2019 photo day (gallery published 2019-11-02)",
+  "size": [
+   1280,
+   852
+  ]
+ },
+ {
+  "id": "3",
+  "abbr": "CHI",
+  "team": "Chicago Bears",
+  "kind": "team_photo_day_2025",
+  "season": 2025,
+  "sourcePage": "https://www.chicagobears.com/photos/2025-team-photo-day-behind-the-scenes-chicago-bears",
+  "imageUrl": "https://static.clubs.nfl.com/image/upload/w_1600,c_limit,q_90/bears/jlsrofgsov2gtsv0h9y7.jpg",
+  "file": "team_photos/chi.jpg",
+  "note": "Behind-the-scenes shot of the full team on the 2025 team-photo risers (has the site's \"Bears Behind the Scenes\" bug baked in)",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "4",
+  "abbr": "CIN",
+  "team": "Cincinnati Bengals",
+  "kind": "older_team_photo",
+  "season": 2017,
+  "sourcePage": "https://www.bengals.com/photos/team-picture-gallery-19314258",
+  "imageUrl": "https://static.clubs.nfl.com/image/private/w_1600,c_limit,q_90/bengals/zprhd27sd24r4iqogkbi.jpg",
+  "file": "team_photos/cin.jpg",
+  "note": "Fallback 1: most recent full-team photo found \u2014 2017 team picture day (gallery published 2017-09-04)",
+  "size": [
+   1280,
+   853
+  ]
+ },
+ {
+  "id": "5",
+  "abbr": "CLE",
+  "team": "Cleveland Browns",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/5 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/3679.jpg",
+  "file": "team_photos/cle.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium Huntington Bank Field",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "6",
+  "abbr": "DAL",
+  "team": "Dallas Cowboys",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/6 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/3687.jpg",
+  "file": "team_photos/dal.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium AT&T Stadium",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "7",
+  "abbr": "DEN",
+  "team": "Denver Broncos",
+  "kind": "official_team_photo",
+  "season": 2025,
+  "sourcePage": "https://www.denverbroncos.com/team/photo",
+  "imageUrl": "https://static.clubs.nfl.com/image/upload/w_1600,c_limit,q_90/broncos/vlaq9xnvgseedsdwljjk.jpg",
+  "file": "team_photos/den.jpg",
+  "note": "Official \"2025 Denver Broncos\" team photo composite (title band and name-key panel cropped off)",
+  "size": [
+   1280,
+   493
+  ]
+ },
+ {
+  "id": "8",
+  "abbr": "DET",
+  "team": "Detroit Lions",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/8 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/3727.jpg",
+  "file": "team_photos/det.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium Ford Field",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "9",
+  "abbr": "GB",
+  "team": "Green Bay Packers",
+  "kind": "team_photo_day_2025",
+  "season": 2025,
+  "sourcePage": "https://www.packers.com/photos/behind-the-scenes-packers-take-2025-team-photo-inside-lambeau-field",
+  "imageUrl": "https://static.clubs.nfl.com/image/upload/w_1600,c_limit,q_90/packers/t97qvbgad6gdkomiosdp.jpg",
+  "file": "team_photos/gb.jpg",
+  "note": "Behind-the-scenes wide shot of the full team posed for the 2025 team photo inside Lambeau Field",
+  "size": [
+   1280,
+   877
+  ]
+ },
+ {
+  "id": "34",
+  "abbr": "HOU",
+  "team": "Houston Texans",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/34 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/3891.jpg",
+  "file": "team_photos/hou.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium NRG Stadium (ESPN lists it as Reliant Stadium)",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "11",
+  "abbr": "IND",
+  "team": "Indianapolis Colts",
+  "kind": "team_photo_day_2025",
+  "season": 2025,
+  "sourcePage": "https://www.colts.com/photos/behind-the-scenes-2025-team-photo",
+  "imageUrl": "https://static.clubs.nfl.com/image/upload/w_1600,c_limit,q_90/colts/qs2fg4yn6y04ptakoemk.jpg",
+  "file": "team_photos/ind.jpg",
+  "note": "Behind-the-scenes wide shot from the 2025 team photo session",
+  "size": [
+   1200,
+   800
+  ]
+ },
+ {
+  "id": "30",
+  "abbr": "JAX",
+  "team": "Jacksonville Jaguars",
+  "kind": "team_photo_day_2025",
+  "season": 2025,
+  "sourcePage": "https://www.jaguars.com/photos/k000538-2025-team-picture-day-behind-the-scenes",
+  "imageUrl": "https://static.clubs.nfl.com/image/upload/w_1600,c_limit,q_90/jaguars/nnqfqugszfjislycexad.jpg",
+  "file": "team_photos/jax.jpg",
+  "note": "Caption: \"A behind-the-scenes image from the 2025 Jaguars Team photoshoot on October 27, 2025.\"",
+  "size": [
+   1280,
+   854
+  ]
+ },
+ {
+  "id": "12",
+  "abbr": "KC",
+  "team": "Kansas City Chiefs",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/12 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/3622.jpg",
+  "file": "team_photos/kc.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium Arrowhead Stadium",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "13",
+  "abbr": "LV",
+  "team": "Las Vegas Raiders",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/13 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/6501.jpg",
+  "file": "team_photos/lv.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium Allegiant Stadium",
+  "size": [
+   1280,
+   535
+  ]
+ },
+ {
+  "id": "24",
+  "abbr": "LAC",
+  "team": "Los Angeles Chargers",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=20251109 (venue 7065 SoFi Stadium; ESPN franchise venue is stale)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/7065.jpg",
+  "file": "team_photos/lac.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium SoFi Stadium",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "14",
+  "abbr": "LAR",
+  "team": "Los Angeles Rams",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=20251109 (venue 7065 SoFi Stadium; ESPN franchise venue is stale)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/7065.jpg",
+  "file": "team_photos/lar.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium SoFi Stadium",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "15",
+  "abbr": "MIA",
+  "team": "Miami Dolphins",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/15 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/3948.jpg",
+  "file": "team_photos/mia.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium Hard Rock Stadium",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "16",
+  "abbr": "MIN",
+  "team": "Minnesota Vikings",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/16 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/interior/5239.jpg",
+  "file": "team_photos/min.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium U.S. Bank Stadium",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "17",
+  "abbr": "NE",
+  "team": "New England Patriots",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/17 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/3738.jpg",
+  "file": "team_photos/ne.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium Gillette Stadium",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "18",
+  "abbr": "NO",
+  "team": "New Orleans Saints",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/18 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/3493.jpg",
+  "file": "team_photos/no.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium Caesars Superdome",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "19",
+  "abbr": "NYG",
+  "team": "New York Giants",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/19 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/3839.jpg",
+  "file": "team_photos/nyg.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium MetLife Stadium",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "20",
+  "abbr": "NYJ",
+  "team": "New York Jets",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/20 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/3839.jpg",
+  "file": "team_photos/nyj.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium MetLife Stadium",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "21",
+  "abbr": "PHI",
+  "team": "Philadelphia Eagles",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/21 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/3806.jpg",
+  "file": "team_photos/phi.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium Lincoln Financial Field",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "23",
+  "abbr": "PIT",
+  "team": "Pittsburgh Steelers",
+  "kind": "team_photo_day_2025",
+  "season": 2025,
+  "sourcePage": "https://www.steelers.com/photos/photos-2025-team-photo-day",
+  "imageUrl": "https://static.clubs.nfl.com/image/upload/w_1600,c_limit,q_90/steelers/vuypd1own6fpf3evvvcw.jpg",
+  "file": "team_photos/pit.jpg",
+  "note": "Caption: \"The Pittsburgh Steelers pose for a photo during team photo day ... Sept. 13, 2025\" (section of full-team pose)",
+  "size": [
+   1280,
+   854
+  ]
+ },
+ {
+  "id": "25",
+  "abbr": "SF",
+  "team": "San Francisco 49ers",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/25 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/4738.jpg",
+  "file": "team_photos/sf.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium Levi's Stadium",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "26",
+  "abbr": "SEA",
+  "team": "Seattle Seahawks",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/26 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/3673.jpg",
+  "file": "team_photos/sea.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium Lumen Field",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "27",
+  "abbr": "TB",
+  "team": "Tampa Bay Buccaneers",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/27 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/3886.jpg",
+  "file": "team_photos/tb.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium Raymond James Stadium",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "10",
+  "abbr": "TEN",
+  "team": "Tennessee Titans",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/10 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/3810.jpg",
+  "file": "team_photos/ten.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium Nissan Stadium",
+  "size": [
+   1280,
+   720
+  ]
+ },
+ {
+  "id": "28",
+  "abbr": "WSH",
+  "team": "Washington Commanders",
+  "kind": "stadium",
+  "season": null,
+  "sourcePage": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/28 (franchise.venue)",
+  "imageUrl": "https://a.espncdn.com/i/venues/nfl/day/3719.jpg",
+  "file": "team_photos/wsh.jpg",
+  "note": "Fallback 2: no 2025 or recent full-team photo found; ESPN photo of home stadium Northwest Stadium",
+  "size": [
+   1280,
+   720
+  ]
+ }
+]

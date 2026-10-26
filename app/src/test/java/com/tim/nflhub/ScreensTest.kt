@@ -4,14 +4,16 @@ import android.graphics.BitmapFactory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import kotlinx.coroutines.runBlocking
@@ -38,9 +40,22 @@ class ScreensTest {
 
     private fun shot(name: String, content: @Composable () -> Unit) = p.snapshot(name) {
         MaterialTheme(colorScheme = lightColorScheme(primary = EaglesGreen, secondary = EaglesSilver)) {
-            CompositionLocalProvider(LocalImageOverride provides { u -> imgs[u] }) {
+            CompositionLocalProvider(LocalImageOverride provides { u -> imgs[u] }, LocalTeamPhoto provides { a -> photo(a) }) {
                 Surface(Modifier.fillMaxSize(), color = Color.White) { content() }
             }
+        }
+    }
+
+    /** Bundled banner photos straight from src/main/assets (same files the APK ships). */
+    private fun photo(abbr: String) = File("src/main/assets/team_photos/${abbr.lowercase()}.jpg").takeIf { it.exists() }
+        ?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() }
+
+    /** Paparazzi has no real status bar, so simulate a 24dp one: the banner gets it as its top inset (exactly what
+     *  safeDrawing supplies on a phone) and a translucent bar with clock/icons is drawn over it. */
+    private val fakeInsets = WindowInsets(top = 24.dp)
+    @Composable private fun FakeStatusBar() {
+        Row(Modifier.fillMaxWidth().height(24.dp).padding(horizontal = 10.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Text("9:41", color = Color.White, fontSize = 12.sp); Spacer(Modifier.weight(1f)); Text("▲ ▮ 87%", color = Color.White, fontSize = 11.sp)
         }
     }
 
@@ -53,14 +68,18 @@ class ScreensTest {
         (teams.map { it.logo } + team.logo + NFL_SHIELD + sch.games.map { it.oppLogo }).distinct().forEach { img(it) }
         val zone = java.time.ZoneId.of("America/New_York")
         shot(team.abbr.lowercase() + (if (dropdown != null) "_dropdown_" + dropdown.ifBlank { "all" } else "_top")) {
+            var bannerPx by remember { mutableIntStateOf(0) }
             Box(Modifier.fillMaxSize()) {
                 Column(Modifier.fillMaxSize()) {
-                    TopBoxes(team, id != EAGLES_ID, dropdown != null, {}, {}, {}, {})
-                    TeamBanner(team, hdr, team.name)
+                    TeamBanner(team, hdr, team.name, showHome = id != EAGLES_ID, teamsOpen = dropdown != null,
+                        onLeague = {}, onTeams = {}, onHome = {}, onSettings = {}, insets = fakeInsets,
+                        modifier = Modifier.onSizeChanged { bannerPx = it.height })
                     TeamTabs(1, team) {}
                     sch.games.filter { it.seasonType == 2 }.take(6).forEach { GameRow(it, zone); HorizontalDivider() }
                 }
-                if (dropdown != null) TeamsDropdown(Load.Ok(teams), {}, id, {}, {}, autoFocus = false, initialQuery = dropdown)
+                if (dropdown != null) TeamsDropdown(Load.Ok(teams), {}, id, {}, {}, autoFocus = false, initialQuery = dropdown,
+                    topOffset = with(LocalDensity.current) { bannerPx.toDp() })
+                FakeStatusBar()
             }
         }
     }
@@ -68,6 +87,25 @@ class ScreensTest {
     @Test fun eaglesTop() = teamTop(EAGLES_ID)
     @Test fun steelersTop() = teamTop("23")
     @Test fun cardinalsTop() = teamTop("22")
+    @Test fun broncosTop() = teamTop("7")
+    @Test fun packersTop() = teamTop("9")
+    @Test fun bearsTop() = teamTop("3")
+    @Test fun raidersTop() = teamTop("13")
+
+    @Test fun leagueTop() {
+        img(NFL_SHIELD)
+        val news = runBlocking { Api.leagueNews() }
+        shot("league_top") {
+            Box(Modifier.fillMaxSize()) {
+                Column(Modifier.fillMaxSize()) {
+                    LeagueBanner(onHome = {}, onTeams = {}, onSettings = {}, insets = fakeInsets)
+                    IconTabs(0, NFL_TABS, EaglesGreen) {}
+                    news.take(3).forEach { Text(it.headline, Modifier.padding(12.dp), maxLines = 2); HorizontalDivider() }
+                }
+                FakeStatusBar()
+            }
+        }
+    }
     @Test fun dropdownAll() = teamTop(EAGLES_ID, "")
     @Test fun dropdownSearch() = teamTop(EAGLES_ID, "new")
 

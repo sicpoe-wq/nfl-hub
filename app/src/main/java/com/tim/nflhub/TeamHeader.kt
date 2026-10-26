@@ -8,6 +8,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -21,7 +22,14 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.painter.Painter
@@ -38,8 +46,6 @@ import coil.compose.AsyncImage
 const val NFL_SHIELD = "https://a.espncdn.com/i/teamlogos/leagues/500/nfl.png"
 val NflNavy = Color(0xFF013369)
 val NflRed = Color(0xFFD50A0A)
-/** Height of the League/Teams box row; the Teams dropdown opens right below it. */
-val TOP_BOXES_HEIGHT = 76.dp
 
 /** Lets JVM screenshot tests supply local logo bitmaps instead of network loads. Null in the app. */
 val LocalImageOverride = staticCompositionLocalOf<((String) -> Painter?)?> { null }
@@ -65,55 +71,13 @@ fun bannerColors(t: Team?): Pair<Color, Color> {
     return lerp(c1, Color.Black, if (c1.luminance() > 0.45f) 0.3f else 0f) to c2
 }
 
-@Composable
-fun TopBoxes(team: Team?, showHome: Boolean, teamsOpen: Boolean, onLeague: () -> Unit, onTeams: () -> Unit, onHome: () -> Unit, onSettings: () -> Unit) {
-    Row(Modifier.fillMaxWidth().height(TOP_BOXES_HEIGHT).background(Color(0xFF0E1726)).padding(start = 8.dp, top = 8.dp, bottom = 8.dp, end = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        // LEFT: The League
-        Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(12.dp))
-            .background(Brush.linearGradient(listOf(NflNavy, Color(0xFF0B2A5B), NflRed)))
-            .clickable(onClick = onLeague)) {
-            // stripes + big faint shield behind the words
-            Row(Modifier.fillMaxSize()) { repeat(6) { i -> Box(Modifier.weight(1f).fillMaxHeight().background(if (i % 2 == 0) Color.White.copy(alpha = 0.04f) else Color.Transparent)) } }
-            NetImage(NFL_SHIELD, Modifier.size(78.dp).align(Alignment.CenterEnd).offset(x = 14.dp).alpha(0.30f))
-            Row(Modifier.fillMaxSize().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                NetImage(NFL_SHIELD, Modifier.size(32.dp)); Spacer(Modifier.width(8.dp))
-                Column {
-                    Text("The League", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, maxLines = 1,
-                        style = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.5f), blurRadius = 4f)))
-                    Text("Scores & stats", color = Color.White.copy(alpha = 0.85f), fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-        }
-        // RIGHT: Teams dropdown
-        val (c1, c2) = bannerColors(team)
-        Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(12.dp))
-            .background(Brush.linearGradient(listOf(Color(0xFF263241), lerp(c1, Color(0xFF263241), 0.35f))))
-            .border(1.dp, if (teamsOpen) Color.White else Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
-            .clickable(onClick = onTeams)) {
-            Row(Modifier.fillMaxSize().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Groups, null, tint = Color.White, modifier = Modifier.size(28.dp)); Spacer(Modifier.width(8.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Teams", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, maxLines = 1)
-                    Text("All 32 teams", color = Color.White.copy(alpha = 0.85f), fontSize = 10.sp, maxLines = 1)
-                }
-                Icon(if (teamsOpen) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, "Open team list", tint = Color.White)
-            }
-        }
-        Column(Modifier.width(36.dp).fillMaxHeight(), verticalArrangement = Arrangement.SpaceEvenly, horizontalAlignment = Alignment.CenterHorizontally) {
-            IconButton(onClick = onSettings, Modifier.size(30.dp)) { Icon(Icons.Default.Settings, "Settings", tint = Color.White) }
-            if (showHome) IconButton(onClick = onHome, Modifier.size(30.dp)) { Icon(Icons.Default.Home, "Home team", tint = Color.White) }
-        }
-    }
-}
-
 /** Dropdown panel under the Teams box: search field + scrollable list of all teams, filtered live as you type. */
 @Composable
-fun TeamsDropdown(teamsL: Load<List<Team>>, retry: () -> Unit, currentId: String, onPick: (String) -> Unit, onDismiss: () -> Unit, autoFocus: Boolean = true, initialQuery: String = "") {
+fun TeamsDropdown(teamsL: Load<List<Team>>, retry: () -> Unit, currentId: String, onPick: (String) -> Unit, onDismiss: () -> Unit, autoFocus: Boolean = true, initialQuery: String = "", topOffset: Dp = 0.dp) {
     var q by remember { mutableStateOf(initialQuery) }
     val fr = remember { FocusRequester() }
     Column(Modifier.fillMaxSize()) {
-        Spacer(Modifier.height(TOP_BOXES_HEIGHT))
+        Spacer(Modifier.height(topOffset)) // panel opens directly under the banner (where the Teams button sits)
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f))
             .clickable(remember { MutableInteractionSource() }, null, onClick = onDismiss)) {
             Surface(Modifier.fillMaxWidth().padding(horizontal = 8.dp).heightIn(max = 480.dp)
@@ -148,22 +112,147 @@ fun TeamsDropdown(teamsL: Load<List<Team>>, retry: () -> Unit, currentId: String
     if (autoFocus) LaunchedEffect(Unit) { try { fr.requestFocus() } catch (_: Exception) {} }
 }
 
+/** Fill = ESPN primary color, outline = ESPN alternate color. If the primary is near-black (it would vanish on the
+ *  darkened photo) the two are swapped; if both are dark, the outline falls back to white. */
+fun wordmarkColors(t: Team?): Pair<Color, Color> {
+    var fill = hexColor(t?.color ?: "", EaglesGreen)
+    var stroke = hexColor(t?.altColor ?: "", Color.White)
+    if (fill.luminance() < 0.02f && stroke.luminance() > 0.1f) { val x = fill; fill = stroke; stroke = x }
+    if (stroke.luminance() < 0.08f) stroke = Color.White
+    return fill to stroke
+}
+
+/** Big wordmark-style text: thick outline pass + fill pass on top, shrunk to fit one line. */
 @Composable
-fun TeamBanner(team: Team?, header: TeamHeader?, fallbackName: String) {
+fun OutlinedWordmark(text: String, font: FontFamily, fill: Color, stroke: Color, maxSize: Float, modifier: Modifier = Modifier) {
+    BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+        val measurer = rememberTextMeasurer()
+        val density = LocalDensity.current
+        val maxW = constraints.maxWidth
+        val size = remember(text, font, maxW) {
+            var s = maxSize
+            while (s > 14f && measurer.measure(text, TextStyle(fontFamily = font, fontSize = s.sp, letterSpacing = 1.sp), maxLines = 1, softWrap = false).size.width > maxW) s -= 1f
+            s
+        }
+        val strokePx = with(density) { (size / 9f).coerceIn(2.5f, 6f).dp.toPx() }
+        val base = TextStyle(fontFamily = font, fontSize = size.sp, letterSpacing = 1.sp, textAlign = TextAlign.Center, lineHeight = (size * 1.05f).sp)
+        Text(text, maxLines = 1, softWrap = false, color = stroke,
+            style = base.copy(drawStyle = Stroke(width = strokePx, join = StrokeJoin.Round),
+                shadow = Shadow(Color.Black.copy(alpha = 0.85f), offset = Offset(0f, 4f), blurRadius = 10f)))
+        Text(text, maxLines = 1, softWrap = false, color = fill, style = base)
+    }
+}
+
+/**
+ * Team banner: the team's bundled photo (darkened) edge-to-edge, extending behind the status bar.
+ * Controls are inset-aware: home (top-left) and settings (top-right) sit BELOW the status bar;
+ * "The League" and "Teams" are equal-size buttons centered at the very bottom of the banner.
+ */
+@Composable
+fun TeamBanner(
+    team: Team?, header: TeamHeader?, fallbackName: String,
+    showHome: Boolean, teamsOpen: Boolean,
+    onLeague: () -> Unit, onTeams: () -> Unit, onHome: () -> Unit, onSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+    insets: WindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+) {
     val (c1, c2) = bannerColors(team)
-    val shadow = TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.55f), blurRadius = 6f))
-    Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(c1, c2)))) {
-        if (team != null) NetImage(team.logo, Modifier.size(170.dp).align(Alignment.CenterEnd).offset(x = 50.dp).alpha(0.13f))
-        if (team != null) NetImage(team.logo, Modifier.size(120.dp).align(Alignment.CenterStart).offset(x = (-50).dp).alpha(0.08f))
-        Column(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            if (team != null) NetImage(team.logo, Modifier.size(76.dp))
-            Text(team?.name ?: fallbackName, color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center,
-                style = shadow, modifier = Modifier.padding(top = 4.dp, start = 12.dp, end = 12.dp))
+    val photo = rememberTeamPhoto(team?.abbr)
+    Box(modifier.fillMaxWidth().background(Brush.linearGradient(listOf(c1, c2)))) {
+        if (photo != null) Image(photo, null, Modifier.matchParentSize(), contentScale = ContentScale.Crop)
+        else if (team != null) NetImage(team.logo, Modifier.size(170.dp).align(Alignment.CenterEnd).offset(x = 50.dp).alpha(0.13f))
+        // dark scrim: heavier at the top (status bar icons) and bottom (buttons), lighter through the middle
+        Box(Modifier.matchParentSize().background(Brush.verticalGradient(
+            0f to Color.Black.copy(alpha = 0.72f), 0.35f to Color.Black.copy(alpha = 0.50f),
+            0.65f to Color.Black.copy(alpha = 0.55f), 1f to Color.Black.copy(alpha = 0.85f))))
+        Column(Modifier.fillMaxWidth().windowInsetsPadding(insets),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (showHome) RoundIcon(Icons.Default.Home, "Home team", onHome) else Spacer(Modifier.size(40.dp))
+                Spacer(Modifier.weight(1f))
+                if (team != null) NetImage(team.logo, Modifier.size(40.dp))
+                Spacer(Modifier.weight(1f))
+                RoundIcon(Icons.Default.Settings, "Settings", onSettings)
+            }
+            val (fill, stroke) = wordmarkColors(team)
+            val font = teamFont(team?.abbr)
+            val loc = team?.location?.takeIf { it.isNotBlank() && team.nickname.isNotBlank() }
+            val big = (if (loc != null) team.nickname else team?.name ?: fallbackName).uppercase()
+            if (loc != null) Text(loc.uppercase(), color = Color.White, fontFamily = font, fontSize = 17.sp, letterSpacing = 2.sp, maxLines = 1,
+                style = TextStyle(shadow = Shadow(Color.Black, blurRadius = 8f)), modifier = Modifier.padding(top = 2.dp))
+            OutlinedWordmark(big, font, fill, stroke, maxSize = 56f, modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp))
             val detail = listOfNotNull(header?.record?.ifBlank { null }, header?.standing?.ifBlank { null }).joinToString("  ·  ")
-            Text(detail.ifBlank { " " }, color = Color.White.copy(alpha = 0.85f), fontSize = 13.sp, fontWeight = FontWeight.Medium, style = shadow)
+            Text(detail.ifBlank { " " }, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                style = TextStyle(shadow = Shadow(Color.Black, blurRadius = 8f)))
+            Spacer(Modifier.height(12.dp))
+            BannerButtons(teamsOpen, onLeague, onTeams)
+            Spacer(Modifier.height(10.dp))
         }
         Box(Modifier.fillMaxWidth().height(3.dp).align(Alignment.BottomCenter).background(hexColor(team?.altColor ?: "", Color.White).let {
             if (it.luminance() < 0.08f) Color.White.copy(alpha = 0.35f) else it }))
+    }
+}
+
+@Composable
+private fun RoundIcon(icon: ImageVector, desc: String, onClick: () -> Unit) {
+    IconButton(onClick = onClick, Modifier.size(40.dp)) {
+        Box(Modifier.size(34.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.35f)), Alignment.Center) {
+            Icon(icon, desc, tint = Color.White, modifier = Modifier.size(22.dp))
+        }
+    }
+}
+
+/** League screen banner: same layout as the team banner (inset-aware icons on top, big name, League/Teams at the bottom),
+ *  on the NFL navy→red gradient (no photo, so nothing is mislabeled). */
+@Composable
+fun LeagueBanner(onHome: () -> Unit, onTeams: () -> Unit, onSettings: (() -> Unit)?,
+                 insets: WindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)) {
+    Box(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(NflNavy, Color(0xFF0B2A5B), NflRed)))) {
+        NetImage(NFL_SHIELD, Modifier.size(190.dp).align(Alignment.CenterEnd).offset(x = 50.dp).alpha(0.12f))
+        Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.45f), Color.Transparent, Color.Black.copy(alpha = 0.5f)))))
+        Column(Modifier.fillMaxWidth().windowInsetsPadding(insets),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                RoundIcon(Icons.Default.Home, "Back to my team", onHome)
+                Spacer(Modifier.weight(1f))
+                NetImage(NFL_SHIELD, Modifier.size(40.dp))
+                Spacer(Modifier.weight(1f))
+                if (onSettings != null) RoundIcon(Icons.Default.Settings, "Settings", onSettings) else Spacer(Modifier.size(40.dp))
+            }
+            Text("NATIONAL FOOTBALL LEAGUE", color = Color.White, fontFamily = WordmarkFonts.anton, fontSize = 15.sp, letterSpacing = 2.sp, maxLines = 1)
+            OutlinedWordmark("THE LEAGUE", WordmarkFonts.anton, Color.White, NflRed, maxSize = 52f, modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp))
+            Spacer(Modifier.height(10.dp))
+            BannerButtons(false, onLeague = {}, onTeams = onTeams, leagueSelected = true)
+            Spacer(Modifier.height(10.dp))
+        }
+    }
+}
+
+val BANNER_BUTTON_W = 150.dp
+val BANNER_BUTTON_H = 40.dp
+
+/** "The League" + "Teams": same size, side by side, centered. */
+@Composable
+fun BannerButtons(teamsOpen: Boolean, onLeague: () -> Unit, onTeams: () -> Unit, leagueSelected: Boolean = false) {
+    val shape = RoundedCornerShape(20.dp)
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(BANNER_BUTTON_W, BANNER_BUTTON_H).clip(shape)
+            .background(Brush.linearGradient(listOf(NflNavy, Color(0xFF0B2A5B), NflRed)))
+            .border(if (leagueSelected) 2.dp else 1.dp, if (leagueSelected) Color.White else Color.White.copy(alpha = 0.35f), shape).clickable(onClick = onLeague), Alignment.Center) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                NetImage(NFL_SHIELD, Modifier.size(22.dp)); Spacer(Modifier.width(6.dp))
+                Text("The League", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, maxLines = 1)
+            }
+        }
+        Box(Modifier.size(BANNER_BUTTON_W, BANNER_BUTTON_H).clip(shape)
+            .background(Color.Black.copy(alpha = if (teamsOpen) 0.75f else 0.55f))
+            .border(1.dp, if (teamsOpen) Color.White else Color.White.copy(alpha = 0.35f), shape).clickable(onClick = onTeams), Alignment.Center) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Groups, null, tint = Color.White, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(6.dp))
+                Text("Teams", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, maxLines = 1)
+                Icon(if (teamsOpen) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, "Open team list", tint = Color.White, modifier = Modifier.size(20.dp))
+            }
+        }
     }
 }
 
