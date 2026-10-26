@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,6 +25,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import android.content.res.Configuration
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
@@ -132,18 +144,31 @@ object GameApi {
 @Composable
 fun GameScreen(eventId: String, weekText: String, onBack: () -> Unit, onTeam: (String) -> Unit = {}) {
     val (l, retry) = rememberLoad("game-$eventId") { GameApi.summary(eventId) }
+    GameScreenContent(l, retry, weekText, onBack, onTeam)
+}
+
+@kotlin.OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun GameScreenContent(l: Load<GameSummary>, retry: () -> Unit, weekText: String, onBack: () -> Unit, onTeam: (String) -> Unit = {}) {
     val title = (l as? Load.Ok)?.v?.let { "${it.away.abbr} @ ${it.home.abbr}" } ?: "Game"
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text(title, fontWeight = FontWeight.Bold) },
-            navigationIcon = { TextButton(onClick = onBack) { Text("‹ Back", color = Color.White) } },
-            actions = { TextButton(onClick = retry) { Text("Refresh", color = Color.White) } },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = EaglesGreen, titleContentColor = Color.White)
-        )
+    // Same NFL navy/red league theme in both entry points (Scores and a team's Schedule).
+    LeagueTheme {
+    Scaffold(contentWindowInsets = WindowInsets.safeDrawing, topBar = {
+        Column(Modifier.background(LeagueTabBrush)) {
+            TopAppBar(
+                title = { Text(title, fontWeight = FontWeight.Bold) },
+                navigationIcon = { TextButton(onClick = onBack) { Text("‹ Back", color = Color.White) } },
+                actions = { TextButton(onClick = retry) { Text("Refresh", color = Color.White) } },
+                windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent, titleContentColor = Color.White)
+            )
+            Box(Modifier.fillMaxWidth().height(2.dp).background(LeagueBorder))
+        }
     }) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
             LoadView(l, retry) { g -> GameBody(g, weekText, onTeam) }
         }
+    }
     }
 }
 
@@ -153,25 +178,26 @@ private fun GameBody(g: GameSummary, weekText: String, onTeam: (String) -> Unit)
     val teams = listOf(g.away, g.home)
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         ScoreHeader(g, weekText)
-        TabRow(selectedTabIndex = tab, containerColor = Color.White, contentColor = EaglesGreen) {
+        TabRow(selectedTabIndex = tab, containerColor = Color.White, contentColor = NflNavy,
+            indicator = { pos -> if (tab < pos.size) TabRowDefaults.SecondaryIndicator(Modifier.tabIndicatorOffset(pos[tab]), height = 3.dp, color = NflRed) }) {
             teams.forEachIndexed { i, t ->
                 Tab(selected = tab == i, onClick = { tab = i }, text = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        AsyncImage(t.logo, null, Modifier.size(24.dp)); Spacer(Modifier.width(6.dp)); Text(t.abbr, fontWeight = FontWeight.Bold)
+                        NetImage(t.logo, Modifier.size(24.dp)); Spacer(Modifier.width(6.dp)); Text(t.abbr, fontWeight = FontWeight.Bold)
                     }
                 })
             }
         }
         val t = teams[tab]
         val b = g.box[t.id]
-        Row(Modifier.fillMaxWidth().padding(12.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFE8F0F1)).clickable { onTeam(t.id) }.padding(12.dp),
+        Row(Modifier.fillMaxWidth().padding(12.dp).clip(RoundedCornerShape(12.dp)).background(LeagueTint).clickable { onTeam(t.id) }.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            AsyncImage(t.logo, t.name, Modifier.size(56.dp)); Spacer(Modifier.width(12.dp))
+            NetImage(t.logo, Modifier.size(56.dp)); Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(t.name, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = EaglesGreen)
+                Text(t.name, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = NflNavy)
                 Text("Tap to open team page", fontSize = 12.sp, color = Color.Gray)
             }
-            Text("›", fontSize = 26.sp, color = EaglesGreen)
+            Text("›", fontSize = 26.sp, color = NflRed)
         }
         if (b == null || (b.teamStats.isEmpty() && b.cats.isEmpty())) {
             Text(if (g.state == "pre") "Box score is available once the game starts." else "ESPN has no box score for this game yet.", Modifier.padding(16.dp), color = Color.Gray)
@@ -189,7 +215,7 @@ private fun GameBody(g: GameSummary, weekText: String, onTeam: (String) -> Unit)
             SectionTitle("Scoring summary")
             g.scoring.forEach { p ->
                 Row(Modifier.fillMaxWidth().padding(16.dp, 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    if (p.logo.isNotBlank()) AsyncImage(p.logo, null, Modifier.size(24.dp)) else Spacer(Modifier.size(24.dp))
+                    if (p.logo.isNotBlank()) NetImage(p.logo, Modifier.size(24.dp)) else Spacer(Modifier.size(24.dp))
                     Spacer(Modifier.width(8.dp))
                     Column(Modifier.weight(1f)) {
                         Text(p.text, fontSize = 13.sp)
@@ -209,11 +235,11 @@ private fun qName(p: Int) = when (p) { 0 -> ""; in 1..4 -> "Q$p"; 5 -> "OT"; els
 
 @Composable
 private fun SectionTitle(t: String) =
-    Text(t, Modifier.fillMaxWidth().background(Color(0xFFEEEEEE)).padding(16.dp, 8.dp), fontWeight = FontWeight.Bold, color = EaglesGreen)
+    Text(t, Modifier.fillMaxWidth().background(Color(0xFFEEEEEE)).padding(16.dp, 8.dp), fontWeight = FontWeight.Bold, color = NflNavy)
 
 @Composable
 private fun ScoreHeader(g: GameSummary, weekText: String) {
-    Column(Modifier.fillMaxWidth().background(Color(0xFFE8F0F1)).padding(12.dp)) {
+    Column(Modifier.fillMaxWidth().background(LeagueTint).padding(12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             TeamScore(g.away, Modifier.weight(1f))
             Column(Modifier.width(96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -247,16 +273,17 @@ private fun ScoreHeader(g: GameSummary, weekText: String) {
 @Composable
 private fun TeamScore(t: GTeam, m: Modifier) {
     Column(m, horizontalAlignment = Alignment.CenterHorizontally) {
-        AsyncImage(t.logo, null, Modifier.size(52.dp))
+        NetImage(t.logo, Modifier.size(52.dp))
         Text(t.abbr, fontWeight = FontWeight.Bold)
-        Text(t.score.ifBlank { "–" }, fontSize = 30.sp, fontWeight = if (t.winner) FontWeight.ExtraBold else FontWeight.Normal)
+        Text(t.score.ifBlank { "–" }, fontSize = 30.sp, fontWeight = if (t.winner) FontWeight.ExtraBold else FontWeight.Normal,
+            color = if (t.winner) NflNavy else Color.Unspecified)
         if (t.record.isNotBlank()) Text(t.record, fontSize = 11.sp, color = Color.Gray)
     }
 }
 
 @Composable
 private fun BoxTable(c: BoxCat) {
-    Text(c.title, Modifier.padding(16.dp, 12.dp, 16.dp, 4.dp), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = EaglesGreen)
+    Text(c.title, Modifier.padding(16.dp, 12.dp, 16.dp, 4.dp), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = NflNavy)
     Row(Modifier.padding(horizontal = 16.dp)) {
         Column {
             Cell("Player", 140, true)
@@ -266,7 +293,7 @@ private fun BoxTable(c: BoxCat) {
         Column(Modifier.horizontalScroll(rememberScrollState())) {
             Row { c.labels.forEach { Cell(it, 58, true) } }
             c.rows.forEach { (_, v) -> Row { v.forEach { Cell(it, 58, false) } } }
-            if (c.totals.isNotEmpty()) Row(Modifier.background(Color(0xFFE8F0F1))) { c.totals.forEach { Cell(it, 58, true) } }
+            if (c.totals.isNotEmpty()) Row(Modifier.background(LeagueTint)) { c.totals.forEach { Cell(it, 58, true) } }
         }
     }
 }
@@ -294,7 +321,7 @@ private fun Highlights(g: GameSummary, weekText: String) {
         Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text("ESPN has no highlight clips for this game (ESPN clips usually expire a couple of days after the game).", fontSize = 13.sp, color = Color.Gray, textAlign = TextAlign.Center)
             Spacer(Modifier.height(10.dp))
-            Button(onClick = openYt, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFCC0000))) { Text("▶  Watch highlights on YouTube") }
+            Button(onClick = openYt, colors = ButtonDefaults.buttonColors(containerColor = NflRed)) { Text("▶  Watch highlights on YouTube") }
         }
         return
     }
@@ -314,10 +341,10 @@ private fun Highlights(g: GameSummary, weekText: String) {
     }
     if (g.videos.size > 1) g.videos.forEach { v ->
         val on = v.id == s.id
-        Row(Modifier.fillMaxWidth().clickable { sel = v; playing = true }.background(if (on) Color(0xFFE8F0F1) else Color.Transparent).padding(16.dp, 6.dp),
+        Row(Modifier.fillMaxWidth().clickable { sel = v; playing = true }.background(if (on) LeagueTint else Color.Transparent).padding(16.dp, 6.dp),
             verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(v.thumb, null, Modifier.width(112.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(6.dp))
-                .then(if (on) Modifier.border(2.dp, EaglesGreen, RoundedCornerShape(6.dp)) else Modifier), contentScale = ContentScale.Crop)
+                .then(if (on) Modifier.border(2.dp, NflRed, RoundedCornerShape(6.dp)) else Modifier), contentScale = ContentScale.Crop)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(v.title, fontSize = 13.sp, fontWeight = if (on) FontWeight.Bold else FontWeight.Normal, maxLines = 3)
@@ -325,12 +352,13 @@ private fun Highlights(g: GameSummary, weekText: String) {
             }
         }
     }
-    TextButton(onClick = openYt, modifier = Modifier.padding(horizontal = 8.dp)) { Text("More highlights on YouTube ›", color = Color(0xFFCC0000)) }
+    TextButton(onClick = openYt, modifier = Modifier.padding(horizontal = 8.dp)) { Text("More highlights on YouTube ›", color = NflRed) }
 }
 
 private fun dur(sec: Int) = "%d:%02d".format(sec / 60, sec % 60)
 
-/** Plays HLS (adaptive) first; if that fails, falls back to the progressive MP4. */
+/** Plays HLS (adaptive) first; if that fails, falls back to the progressive MP4. The ExoPlayer lives here so the same
+ *  playback continues when the phone turns sideways and the clip moves into the full-screen view. */
 @OptIn(UnstableApi::class)
 @Composable
 private fun VideoPlayer(v: Highlight) {
@@ -351,8 +379,48 @@ private fun VideoPlayer(v: Highlight) {
         }
     }
     DisposableEffect(player) { onDispose { player.release() } }
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    var fsDismissed by remember(v.id) { mutableStateOf(false) }
+    LaunchedEffect(landscape) { if (!landscape) fsDismissed = false }
+    val fullscreen = landscape && !fsDismissed
     Box(Modifier.fillMaxSize()) {
-        AndroidView(factory = { PlayerView(it).apply { this.player = player; useController = true } }, modifier = Modifier.fillMaxSize())
+        if (fullscreen) Text("Playing full screen", Modifier.align(Alignment.Center), color = Color.White, fontSize = 13.sp)
+        else PlayerSurface(player, Modifier.fillMaxSize())
         err?.let { Text(it, Modifier.align(Alignment.Center).background(Color(0xCC000000)).padding(12.dp), color = Color.White, fontSize = 13.sp, textAlign = TextAlign.Center) }
     }
+    if (fullscreen) {
+        Dialog(onDismissRequest = { fsDismissed = true },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+            val window = (LocalView.current.parent as? DialogWindowProvider)?.window
+            val view = LocalView.current
+            DisposableEffect(window) {
+                window?.let {
+                    it.setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT)
+                    if (android.os.Build.VERSION.SDK_INT >= 28) it.attributes = it.attributes.apply {
+                        layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES }
+                    WindowCompat.getInsetsController(it, view).apply {
+                        hide(WindowInsetsCompat.Type.systemBars())
+                        systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    }
+                }
+                onDispose { }
+            }
+            Box(Modifier.fillMaxSize().background(Color.Black)) {
+                PlayerSurface(player, Modifier.fillMaxSize())
+                err?.let { Text(it, Modifier.align(Alignment.Center).background(Color(0xCC000000)).padding(12.dp), color = Color.White, fontSize = 13.sp, textAlign = TextAlign.Center) }
+                IconButton(onClick = { fsDismissed = true }, Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.safeDrawing).padding(8.dp)) {
+                    Box(Modifier.size(36.dp).clip(RoundedCornerShape(18.dp)).background(Color(0x99000000)), Alignment.Center) {
+                        Icon(Icons.Default.Close, "Exit full screen", tint = Color.White)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(UnstableApi::class)
+@Composable
+private fun PlayerSurface(player: ExoPlayer, modifier: Modifier) {
+    AndroidView(factory = { PlayerView(it).apply { this.player = player; useController = true } }, modifier = modifier,
+        onRelease = { it.player = null })
 }

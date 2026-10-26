@@ -119,24 +119,23 @@ fun App() {
 
     val (hdrL, _) = rememberLoad("hdr-$teamId") { Api.teamHeader(teamId) }
     Box(Modifier.fillMaxSize()) {
-        Scaffold(topBar = {
-            Column {
-                TeamBanner(team, (hdrL as? Load.Ok)?.v, title, showHome = teamId != defaultTeamId, teamsOpen = showPicker,
+        val short = isShortScreen()
+        val collapse = remember(teamId, tab) { CollapseState() }
+        CollapsingScreen(collapse,
+            header = {
+                CollapsingTeamBanner(collapse, short, team, (hdrL as? Load.Ok)?.v, title, showHome = teamId != defaultTeamId, teamsOpen = showPicker,
                     onLeague = { showPicker = false; nflTab = 0 }, onTeams = { showPicker = !showPicker },
                     onHome = { showPicker = false; teamId = defaultTeamId; tab = 0 }, onSettings = { showPicker = false; showSettings = true },
                     modifier = Modifier.onSizeChanged { bannerPx = it.height })
-                TeamTabs(tab, team) { tab = it }
-            }
-        }) { pad ->
-            Box(Modifier.padding(pad).fillMaxSize()) {
-                key(teamId) {
-                    when (tab) {
-                        0 -> NewsTab(teamId, team?.nickname ?: "")
-                        1 -> ScheduleTab(teamId) { g -> openGame = g.id to scheduleWeekLabel(g) }
-                        2 -> RosterTab(teamId, rosterOrder) { selected = it }
-                        3 -> StatsTab(teamId)
-                        else -> InjuriesTab(teamId) { i -> selected = Player(i.playerId, i.name, i.jersey, i.pos, "", "", "", "", "", i.headshot, i.status, "") }
-                    }
+            },
+            tabs = { TeamTabs(tab, team, inline = short) { tab = it } }) {
+            key(teamId) {
+                when (tab) {
+                    0 -> NewsTab(teamId, team?.nickname ?: "")
+                    1 -> ScheduleTab(teamId) { g -> openGame = g.id to scheduleWeekLabel(g) }
+                    2 -> RosterTab(teamId, rosterOrder) { selected = it }
+                    3 -> StatsTab(teamId)
+                    else -> InjuriesTab(teamId) { i -> selected = Player(i.playerId, i.name, i.jersey, i.pos, "", "", "", "", "", i.headshot, i.status, "") }
                 }
             }
         }
@@ -328,21 +327,18 @@ fun NflScreen(startTab: Int, onTabChange: (Int) -> Unit, onBack: () -> Unit, onT
     var selPlayer by remember { mutableStateOf<Player?>(null) }
     LeagueTheme {
     selPlayer?.let { p -> ModalBottomSheet(onDismissRequest = { selPlayer = null }) { PlayerSheet(p) } }
-    Scaffold(topBar = {
-        Column {
-            LeagueBanner(onHome = onBack, onTeams = onTeams, onSettings = onSettings)
-            LeagueTabs(tab, onTabChange)
-        }
-    }) { pad ->
-        Box(Modifier.padding(pad).fillMaxSize()) {
-            when (tab) {
-                0 -> LoadView(l, retry) { items ->
-                    if (items.isEmpty()) Box(Modifier.fillMaxSize(), Alignment.Center) { Text("No news available") } else NewsList(items)
-                }
-                1 -> ScoresTab(onGame)
-                2 -> StandingsBody(onTeam)
-                else -> LeadersTab { selPlayer = it }
+    val short = isShortScreen()
+    val collapse = remember(tab) { CollapseState() }
+    CollapsingScreen(collapse,
+        header = { CollapsingLeagueBanner(collapse, short, onHome = onBack, onTeams = onTeams, onSettings = onSettings) },
+        tabs = { LeagueTabs(tab, inline = short, onTab = onTabChange) }) {
+        when (tab) {
+            0 -> LoadView(l, retry) { items ->
+                if (items.isEmpty()) Box(Modifier.fillMaxSize(), Alignment.Center) { Text("No news available") } else NewsList(items)
             }
+            1 -> ScoresTab(onGame)
+            2 -> StandingsBody(onTeam)
+            else -> LeadersTab { selPlayer = it }
         }
     }
     }

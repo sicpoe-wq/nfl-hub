@@ -23,14 +23,16 @@ import coil.compose.AsyncImage
 @Composable
 fun SettingsScreen(teams: Load<List<Team>>, retryTeams: () -> Unit, onBack: () -> Unit, onOrderChanged: (List<String>) -> Unit, onDefaultChanged: (String) -> Unit) {
     var tab by remember { mutableIntStateOf(0) }
-    Scaffold(topBar = {
-        Column {
+    Scaffold(contentWindowInsets = WindowInsets.safeDrawing, topBar = {
+        Column(Modifier.background(EaglesGreen)) {
             TopAppBar(
+                windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
                 title = { Text("Settings", fontWeight = FontWeight.Bold) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White) } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = EaglesGreen, titleContentColor = Color.White)
             )
-            TabRow(selectedTabIndex = tab, containerColor = EaglesGreen, contentColor = Color.White) {
+            TabRow(selectedTabIndex = tab, containerColor = EaglesGreen, contentColor = Color.White,
+                modifier = Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))) {
                 listOf("Default Team", "Roster Order").forEachIndexed { i, t -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(t) }) }
             }
         }

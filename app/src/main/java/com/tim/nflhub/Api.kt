@@ -38,6 +38,11 @@ data class StatCategory(val name: String, val rows: List<Pair<String, String>>)
 data class StatTable(val labels: List<String>, val rows: List<Pair<String, List<String>>>)
 data class PlayerStats(val tables: List<Pair<String, StatTable>>)
 
+private val DIV_SUMMARY = Regex("""^\d+(st|nd|rd|th) in (AFC|NFC) (East|North|South|West)$""")
+
+fun ordinal(n: Int): String = n.toString() + when {
+    n % 100 in 11..13 -> "th"; n % 10 == 1 -> "st"; n % 10 == 2 -> "nd"; n % 10 == 3 -> "rd"; else -> "th" }
+
 object Api {
     private const val SITE = "https://site.api.espn.com/apis/site/v2/sports/football/nfl"
     private const val COMMON = "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl"
@@ -68,7 +73,12 @@ object Api {
 
     suspend fun teamHeader(teamId: String): TeamHeader = withContext(Dispatchers.IO) {
         val t = get("$SITE/teams/$teamId").getJSONObject("team")
-        TeamHeader(t.optJSONObject("record")?.optJSONArray("items")?.optJSONObject(0)?.str("summary") ?: "", t.str("standingSummary"))
+        val record = t.optJSONObject("record")?.optJSONArray("items")?.optJSONObject(0)?.str("summary") ?: ""
+        // ESPN's standingSummary is inconsistent: some teams get "2nd in NFC East", others "9th in National Football
+        // Conference". Always compute the division place from the division standings instead.
+        val div = try { StandingsApi.divisionPlace(teamId) } catch (e: Exception) { null }
+        val fallback = t.str("standingSummary").takeIf { DIV_SUMMARY.matches(it) } ?: ""
+        TeamHeader(record.ifBlank { div?.second ?: "" }, div?.first ?: fallback)
     }
 
     private fun parseNews(arr: JSONArray?, keep: (JSONObject) -> Boolean = { true }): List<NewsItem> {

@@ -24,4 +24,10 @@ class LiveApiTest {
             assertTrue(g.box.values.all { it.cats.isNotEmpty() })
         }
     }
+    @Test fun bannerDivisionPlace() = runBlocking {
+        val teams = Api.teams()
+        val re = Regex("""^\d+(st|nd|rd|th) in (AFC|NFC) (East|North|South|West)$""")
+        teams.forEach { t -> val h = Api.teamHeader(t.id); println("BANNER ${t.abbr}: ${h.record}  ·  ${h.standing}"); assertTrue(t.abbr, re.matches(h.standing)) }
+        assertTrue(teams.size == 32)
+    }
 }

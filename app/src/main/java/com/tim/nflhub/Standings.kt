@@ -41,6 +41,22 @@ object StandingsApi {
     // Verified 2026-10-19: returns NFL -> AFC/NFC -> 4 divisions each, entries with playoffSeed, divisionRecord, streak, etc.
     private const val URL = "https://site.web.api.espn.com/apis/v2/sports/football/nfl/standings?level=3"
 
+    @Volatile private var cached: Pair<Long, StandingsData>? = null
+
+    /** Standings no older than [maxAgeMs] (the team banners share one fetch instead of one per team). */
+    suspend fun loadCached(maxAgeMs: Long = 120_000): StandingsData {
+        cached?.let { (t, d) -> if (System.currentTimeMillis() - t < maxAgeMs) return d }
+        return load()
+    }
+
+    /** ("4th in NFC West", record) for a team, using the same tiebroken division order as the Standings screen. */
+    suspend fun divisionPlace(teamId: String): Pair<String, String>? {
+        val d = loadCached()
+        val div = d.divisions.firstOrNull { dv -> dv.rows.any { it.teamId == teamId } } ?: return null
+        val i = div.rows.indexOfFirst { it.teamId == teamId }
+        return "${ordinal(i + 1)} in ${div.name}" to div.rows[i].record
+    }
+
     suspend fun load(): StandingsData = withContext(Dispatchers.IO) {
         val root = Api.get(URL)
         val season = root.optJSONObject("season")?.optString("displayName", "") ?: ""
@@ -61,7 +77,7 @@ object StandingsApi {
         if (divisions.isEmpty()) throw RuntimeException("No standings data")
         val espnSeeds = divisions.all { d -> d.rows.all { it.seed != null } }
         val pictures = divisions.groupBy { it.conf }.map { (conf, ds) -> picture(conf, ds, espnSeeds) }
-        StandingsData(season, divisions, pictures, espnSeeds)
+        StandingsData(season, divisions, pictures, espnSeeds).also { cached = System.currentTimeMillis() to it }
     }
 
     private fun parseRow(e: JSONObject, conf: String, div: String): StandingRow {
@@ -139,7 +155,7 @@ fun StandingsScreen(onBack: () -> Unit, onTeam: (String) -> Unit) {
 private val COLS = listOf("W-L-T" to 56, "PCT" to 46, "DIV" to 50, "PF" to 40, "PA" to 40, "STRK" to 44)
 
 @Composable
-private fun DivisionsView(data: StandingsData, onTeam: (String) -> Unit) {
+internal fun DivisionsView(data: StandingsData, onTeam: (String) -> Unit) {
     val hs = rememberScrollState()
     LazyColumn(Modifier.fillMaxSize()) {
         item { Text("${data.season} season · tap a team to open it · swipe the table sideways for more columns", Modifier.padding(16.dp, 10.dp), fontSize = 12.sp, color = Color.Gray) }
@@ -148,7 +164,7 @@ private fun DivisionsView(data: StandingsData, onTeam: (String) -> Unit) {
             if (divs.isEmpty()) return@forEach
             item {
                 Row(Modifier.fillMaxWidth().background(NflNavy).padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    AsyncImage("https://a.espncdn.com/i/teamlogos/nfl/500/${conf.lowercase()}.png", null, Modifier.size(24.dp)); Spacer(Modifier.width(8.dp))
+                    NetImage("https://a.espncdn.com/i/teamlogos/nfl/500/${conf.lowercase()}.png", Modifier.size(24.dp)); Spacer(Modifier.width(8.dp))
                     Text(if (conf == "AFC") "American Football Conference" else "National Football Conference", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
@@ -162,7 +178,7 @@ private fun DivisionsView(data: StandingsData, onTeam: (String) -> Unit) {
                 items(d.rows) { r ->
                     Row(Modifier.fillMaxWidth().clickable { onTeam(r.teamId) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Row(Modifier.width(150.dp).padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            AsyncImage(r.logo, null, Modifier.size(26.dp)); Spacer(Modifier.width(6.dp))
+                            NetImage(r.logo, Modifier.size(26.dp)); Spacer(Modifier.width(6.dp))
                             Text(r.abbr, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                             if (r.clincher.isNotBlank()) Text(" ${r.clincher}", fontSize = 12.sp, color = if (r.clincher == "e") Color(0xFFC62828) else NflNavy, fontWeight = FontWeight.Bold)
                         }
@@ -196,7 +212,7 @@ private fun PlayoffView(data: StandingsData, onTeam: (String) -> Unit) {
         data.pictures.sortedBy { it.conf }.forEach { p ->
             item {
                 Row(Modifier.fillMaxWidth().background(NflNavy).padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    AsyncImage("https://a.espncdn.com/i/teamlogos/nfl/500/${p.conf.lowercase()}.png", null, Modifier.size(24.dp)); Spacer(Modifier.width(8.dp))
+                    NetImage("https://a.espncdn.com/i/teamlogos/nfl/500/${p.conf.lowercase()}.png", Modifier.size(24.dp)); Spacer(Modifier.width(8.dp))
                     Text("${p.conf} Playoff Picture", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
@@ -220,7 +236,7 @@ private fun SeedRow(seed: String, r: StandingRow, sub: String, tag: String, onTe
             Text(seed, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
         }
         Spacer(Modifier.width(10.dp))
-        AsyncImage(r.logo, null, Modifier.size(32.dp)); Spacer(Modifier.width(10.dp))
+        NetImage(r.logo, Modifier.size(32.dp)); Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(r.name, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1)
