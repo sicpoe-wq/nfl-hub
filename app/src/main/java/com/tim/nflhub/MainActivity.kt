@@ -35,6 +35,9 @@ import coil.compose.AsyncImage
 
 val EaglesGreen = Color(0xFF004C54)
 val EaglesSilver = Color(0xFFA5ACAF)
+/** Accent for shared composables (player sheet headings/career row): Eagles green by default, NFL navy inside LeagueTheme. */
+val LocalAccent = staticCompositionLocalOf { EaglesGreen }
+val LocalAccentTint = staticCompositionLocalOf { Color(0xFFE8F0F1) }
 const val EAGLES_ID = "21"
 
 class MainActivity : ComponentActivity() {
@@ -275,11 +278,11 @@ fun PlayerSheet(p: Player) {
                     item { Text("Player stats", Modifier.padding(top = 12.dp), fontWeight = FontWeight.Bold, fontSize = 17.sp) }
                     if (ps.tables.isEmpty()) item { Text("No stats available for this player.", Modifier.padding(vertical = 12.dp)) }
                     items(ps.tables) { (name, t) ->
-                        Text(name, Modifier.padding(top = 12.dp, bottom = 4.dp), fontWeight = FontWeight.Bold, color = EaglesGreen)
+                        Text(name, Modifier.padding(top = 12.dp, bottom = 4.dp), fontWeight = FontWeight.Bold, color = LocalAccent.current)
                         Column(Modifier.horizontalScroll(rememberScrollState())) {
                             Row { Cell("Season", 110, true); t.labels.forEach { Cell(it, 52, true) } }
                             t.rows.forEach { (s, v) ->
-                                Row(Modifier.background(if (s == "Career") Color(0xFFE8F0F1) else Color.Transparent)) {
+                                Row(Modifier.background(if (s == "Career") LocalAccentTint.current else Color.Transparent)) {
                                     Cell(s, 110, s == "Career"); v.forEach { Cell(it, 52, s == "Career") }
                                 }
                             }
@@ -323,6 +326,7 @@ fun NflScreen(startTab: Int, onTabChange: (Int) -> Unit, onBack: () -> Unit, onT
     val (l, retry) = rememberLoad("league-news") { Api.leagueNews() }
     val tab = startTab
     var selPlayer by remember { mutableStateOf<Player?>(null) }
+    LeagueTheme {
     selPlayer?.let { p -> ModalBottomSheet(onDismissRequest = { selPlayer = null }) { PlayerSheet(p) } }
     Scaffold(topBar = {
         Column {
@@ -340,6 +344,7 @@ fun NflScreen(startTab: Int, onTabChange: (Int) -> Unit, onBack: () -> Unit, onT
                 else -> LeadersTab { selPlayer = it }
             }
         }
+    }
     }
 }
 

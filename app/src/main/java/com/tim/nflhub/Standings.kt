@@ -123,9 +123,9 @@ fun StandingsScreen(onBack: () -> Unit, onTeam: (String) -> Unit) {
                 },
                 navigationIcon = { TextButton(onClick = onBack) { Text("‹ Back", color = Color.White) } },
                 actions = { TextButton(onClick = retry) { Text("Refresh", color = Color.White) } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = EaglesGreen, titleContentColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = NflNavy, titleContentColor = Color.White)
             )
-            TabRow(selectedTabIndex = tab, containerColor = EaglesGreen, contentColor = Color.White) {
+            TabRow(selectedTabIndex = tab, containerColor = NflNavy, contentColor = Color.White) {
                 listOf("Divisions", "Playoff Picture").forEachIndexed { i, t -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(t) }) }
             }
         }
@@ -147,7 +147,7 @@ private fun DivisionsView(data: StandingsData, onTeam: (String) -> Unit) {
             val divs = data.divisions.filter { it.conf == conf }
             if (divs.isEmpty()) return@forEach
             item {
-                Row(Modifier.fillMaxWidth().background(EaglesGreen).padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().background(NflNavy).padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     AsyncImage("https://a.espncdn.com/i/teamlogos/nfl/500/${conf.lowercase()}.png", null, Modifier.size(24.dp)); Spacer(Modifier.width(8.dp))
                     Text(if (conf == "AFC") "American Football Conference" else "National Football Conference", color = Color.White, fontWeight = FontWeight.Bold)
                 }
@@ -155,7 +155,7 @@ private fun DivisionsView(data: StandingsData, onTeam: (String) -> Unit) {
             divs.forEach { d ->
                 item {
                     Row(Modifier.fillMaxWidth().background(Color(0xFFEEEEEE)).padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(d.name, Modifier.width(150.dp).padding(start = 16.dp), fontWeight = FontWeight.Bold, color = EaglesGreen)
+                        Text(d.name, Modifier.width(150.dp).padding(start = 16.dp), fontWeight = FontWeight.Bold, color = NflNavy)
                         Row(Modifier.horizontalScroll(hs)) { COLS.forEach { (c, w) -> Text(c, Modifier.width(w.dp), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray, textAlign = TextAlign.Center) } }
                     }
                 }
@@ -164,14 +164,14 @@ private fun DivisionsView(data: StandingsData, onTeam: (String) -> Unit) {
                         Row(Modifier.width(150.dp).padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                             AsyncImage(r.logo, null, Modifier.size(26.dp)); Spacer(Modifier.width(6.dp))
                             Text(r.abbr, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                            if (r.clincher.isNotBlank()) Text(" ${r.clincher}", fontSize = 12.sp, color = if (r.clincher == "e") Color(0xFFC62828) else Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
+                            if (r.clincher.isNotBlank()) Text(" ${r.clincher}", fontSize = 12.sp, color = if (r.clincher == "e") Color(0xFFC62828) else NflNavy, fontWeight = FontWeight.Bold)
                         }
                         Row(Modifier.horizontalScroll(hs)) {
                             val vals = listOf(r.record + if (r.t == 0) "-0" else "", r.pct, r.divRec, r.pf, r.pa, r.streak)
                             COLS.zip(vals).forEach { (c, v) ->
                                 Text(v.ifBlank { "–" }, Modifier.width(c.second.dp), fontSize = 13.sp, textAlign = TextAlign.Center,
                                     fontWeight = if (c.first == "W-L-T") FontWeight.SemiBold else FontWeight.Normal,
-                                    color = if (c.first == "STRK") (if (v.startsWith("W")) Color(0xFF2E7D32) else if (v.startsWith("L")) Color(0xFFC62828) else Color.Unspecified) else Color.Unspecified)
+                                    color = if (c.first == "STRK") (if (v.startsWith("W")) NflNavy else if (v.startsWith("L")) Color(0xFFC62828) else Color.Unspecified) else Color.Unspecified)
                             }
                         }
                     }
@@ -195,7 +195,7 @@ private fun PlayoffView(data: StandingsData, onTeam: (String) -> Unit) {
         }
         data.pictures.sortedBy { it.conf }.forEach { p ->
             item {
-                Row(Modifier.fillMaxWidth().background(EaglesGreen).padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().background(NflNavy).padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     AsyncImage("https://a.espncdn.com/i/teamlogos/nfl/500/${p.conf.lowercase()}.png", null, Modifier.size(24.dp)); Spacer(Modifier.width(8.dp))
                     Text("${p.conf} Playoff Picture", color = Color.White, fontWeight = FontWeight.Bold)
                 }
@@ -216,7 +216,7 @@ private fun PlayoffView(data: StandingsData, onTeam: (String) -> Unit) {
 @Composable
 private fun SeedRow(seed: String, r: StandingRow, sub: String, tag: String, onTeam: (String) -> Unit, dim: Boolean = false) {
     Row(Modifier.fillMaxWidth().clickable { onTeam(r.teamId) }.padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(28.dp).clip(CircleShape).background(if (dim) Color(0xFFBDBDBD) else EaglesGreen), Alignment.Center) {
+        Box(Modifier.size(28.dp).clip(CircleShape).background(if (dim) Color(0xFFBDBDBD) else NflNavy), Alignment.Center) {
             Text(seed, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
         }
         Spacer(Modifier.width(10.dp))
@@ -224,7 +224,7 @@ private fun SeedRow(seed: String, r: StandingRow, sub: String, tag: String, onTe
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(r.name, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1)
-                if (r.clincher.isNotBlank()) Text(" ${r.clincher}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (r.clincher == "e") Color(0xFFC62828) else Color(0xFF2E7D32))
+                if (r.clincher.isNotBlank()) Text(" ${r.clincher}", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (r.clincher == "e") Color(0xFFC62828) else NflNavy)
             }
             Text(listOf(sub, tag, clinchLegend[r.clincher] ?: "").filter { it.isNotBlank() }.joinToString(" · "), fontSize = 11.sp, color = Color.Gray)
         }

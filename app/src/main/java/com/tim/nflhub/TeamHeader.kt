@@ -279,13 +279,39 @@ fun TeamTabs(tab: Int, team: Team?, onTab: (Int) -> Unit) {
 val LeagueTabBrush: Brush = Brush.horizontalGradient(
     listOf(NflNavy, Color(0xFF0B2A5B), NflRed).map { lerp(it, Color.Black, 0.25f) })
 
-@Composable
-fun LeagueTabs(tab: Int, onTab: (Int) -> Unit) = IconTabs(tab, NFL_TABS, Color.Transparent, onTab, LeagueTabBrush)
+/** Border for the League tab bar, mirroring the team tab bar's framing (a 3dp accent strip along its top edge where the
+ *  banner meets the tabs, plus a thin divider along its bottom edge). Near-black navy reads as black but stays in the
+ *  NFL palette and separates cleanly from both the navy and the red ends of the gradient. */
+val LeagueBorder = Color(0xFF050B18)
 
 @Composable
-fun IconTabs(tab: Int, tabs: List<Pair<String, ImageVector>>, bg: Color, onTab: (Int) -> Unit, brush: Brush? = null) {
+fun LeagueTabs(tab: Int, onTab: (Int) -> Unit) = Column(Modifier.fillMaxWidth()) {
+    Box(Modifier.fillMaxWidth().height(3.dp).background(LeagueBorder))
+    IconTabs(tab, NFL_TABS, Color.Transparent, onTab, LeagueTabBrush, divider = LeagueBorder, dividerHeight = 2.dp)
+}
+
+/** League-only theme: swaps the app's Eagles-green Material accents (chips, buttons, spinners, sheet headings) for NFL navy. */
+val LeagueSelectedChip = Color(0xFFDCE4F2)
+
+@Composable
+fun LeagueTheme(content: @Composable () -> Unit) {
+    val cs = MaterialTheme.colorScheme.copy(
+        primary = NflNavy, onPrimary = Color.White,
+        primaryContainer = LeagueSelectedChip, onPrimaryContainer = NflNavy,
+        secondaryContainer = LeagueSelectedChip, onSecondaryContainer = NflNavy,
+        tertiary = NflRed, surfaceTint = NflNavy,
+    )
+    MaterialTheme(colorScheme = cs) {
+        CompositionLocalProvider(LocalAccent provides NflNavy, LocalAccentTint provides Color(0xFFE6ECF5), content = content)
+    }
+}
+
+@Composable
+fun IconTabs(tab: Int, tabs: List<Pair<String, ImageVector>>, bg: Color, onTab: (Int) -> Unit, brush: Brush? = null,
+             divider: Color? = null, dividerHeight: androidx.compose.ui.unit.Dp = 1.dp) {
     TabRow(selectedTabIndex = tab, containerColor = bg, contentColor = Color.White,
         modifier = if (brush != null) Modifier.background(brush) else Modifier,
+        divider = { if (divider != null) HorizontalDivider(thickness = dividerHeight, color = divider) else HorizontalDivider() },
         indicator = { pos ->
             if (tab < pos.size) {
                 if (brush != null) TabRowDefaults.SecondaryIndicator(Modifier.tabIndicatorOffset(pos[tab]), height = 3.dp, color = Color.White)

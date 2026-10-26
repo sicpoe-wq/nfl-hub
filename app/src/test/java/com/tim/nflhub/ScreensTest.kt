@@ -95,7 +95,7 @@ class ScreensTest {
     @Test fun leagueTop() {
         img(NFL_SHIELD)
         val news = runBlocking { Api.leagueNews() }
-        shot("league_top") {
+        shot("league_top") { LeagueTheme {
             Box(Modifier.fillMaxSize()) {
                 Column(Modifier.fillMaxSize()) {
                     LeagueBanner(onHome = {}, onTeams = {}, onSettings = {}, insets = fakeInsets)
@@ -104,7 +104,7 @@ class ScreensTest {
                 }
                 FakeStatusBar()
             }
-        }
+        } }
     }
     @Test fun dropdownAll() = teamTop(EAGLES_ID, "")
     @Test fun dropdownSearch() = teamTop(EAGLES_ID, "new")
@@ -113,7 +113,7 @@ class ScreensTest {
         val cat = cats.first { it.key == key }
         val rows = runBlocking { LeadersApi.resolve(cat) }
         rows.forEach { img(it.headshot) }
-        shot(name) {
+        shot(name) { LeagueTheme {
             Column(Modifier.fillMaxSize()) {
                 LeagueTabs(3) {}
                 ModeChips(mode) {}
@@ -123,7 +123,7 @@ class ScreensTest {
                 LeaderTitle("$title · ${cat.label}", leaderNote(mode, year, cat))
                 LeaderRows(rows) {}
             }
-        }
+        } }
     }
 
     @Test fun leadersSeason() { val y = runBlocking { LeadersApi.currentSeason() }; leaders("leaders_season", 0, y, runBlocking { LeadersApi.seasonCats(y) }, "rushingYards") }

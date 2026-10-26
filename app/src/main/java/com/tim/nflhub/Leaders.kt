@@ -240,7 +240,7 @@ fun CategoryChips(cats: List<LeaderCat>, selected: String, onCat: (String) -> Un
 
 @Composable
 fun LeaderTitle(title: String, note: String) {
-    Text(title, Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = EaglesGreen)
+    Text(title, Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp), fontWeight = FontWeight.Bold, fontSize = 16.sp, color = NflNavy)
     Text(note, Modifier.padding(horizontal = 16.dp, vertical = 2.dp), fontSize = 11.sp, color = Color.Gray)
 }
 
@@ -268,7 +268,7 @@ fun LeaderRows(rows: List<LeaderRow>, onPlayer: (Player) -> Unit) {
                             Text(listOfNotNull(r.team.ifBlank { null }, if (r.active == true) "Active" else null).joinToString(" · "),
                                 fontSize = 12.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        Text(r.value, fontWeight = FontWeight.Bold, fontSize = 17.sp, color = EaglesGreen)
+                        Text(r.value, fontWeight = FontWeight.Bold, fontSize = 17.sp, color = NflNavy)
                     }
                     HorizontalDivider(color = Color(0xFFEEEEEE))
                 }
