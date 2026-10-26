@@ -99,7 +99,7 @@ fun App() {
     var openGame by remember { mutableStateOf<Pair<String, String>?>(null) }
     val (teamsL, retryTeams) = rememberLoad("teams") { Api.teams() }
     val team = (teamsL as? Load.Ok)?.v?.firstOrNull { it.id == teamId }
-    val title = team?.name ?: if (teamId == EAGLES_ID) "Philadelphia Eagles" else "NFL Hub"
+    val title = team?.name ?: if (teamId == EAGLES_ID) "Philadelphia Eagles" else "NFL Gridiron"
     if (showSettings) {
         androidx.activity.compose.BackHandler { showSettings = false }
         SettingsScreen(teamsL, retryTeams, { showSettings = false }, { rosterOrder = it }, { defaultTeamId = it })
