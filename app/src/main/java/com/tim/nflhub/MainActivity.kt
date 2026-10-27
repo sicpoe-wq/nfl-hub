@@ -88,18 +88,31 @@ fun <T> LoadView(l: Load<T>, retry: () -> Unit, content: @Composable (T) -> Unit
 fun App() {
     val ctx = LocalContext.current
     var defaultTeamId by remember { mutableStateOf(Prefs.defaultTeam(ctx)) }
-    var teamId by remember { mutableStateOf(defaultTeamId) }
+    // Public build: first launch asks which homepage to open (no saved choice yet).
+    var firstRun by remember { mutableStateOf(BuildConfig.IS_PUBLIC && !Prefs.hasDefaultTeam(ctx)) }
+    val leagueHome = defaultTeamId == LEAGUE_ID
+    var teamId by remember { mutableStateOf(if (defaultTeamId == LEAGUE_ID) EAGLES_ID else defaultTeamId) }
     var showSettings by remember { mutableStateOf(false) }
     var rosterOrder by remember { mutableStateOf(Prefs.rosterOrder(ctx)) }
     var showPicker by remember { mutableStateOf(false) }
     var bannerPx by remember { mutableIntStateOf(0) }
     var tab by remember { mutableIntStateOf(0) }
     var selected by remember { mutableStateOf<Player?>(null) }
-    var nflTab by remember { mutableStateOf<Int?>(null) }
+    var nflTab by remember { mutableStateOf<Int?>(if (defaultTeamId == LEAGUE_ID) 0 else null) }
     var openGame by remember { mutableStateOf<Pair<String, String>?>(null) }
     val (teamsL, retryTeams) = rememberLoad("teams") { Api.teams() }
     val team = (teamsL as? Load.Ok)?.v?.firstOrNull { it.id == teamId }
     val title = team?.name ?: if (teamId == EAGLES_ID) "Philadelphia Eagles" else "NFL Gridiron"
+    if (firstRun) {
+        fun pick(id: String) {
+            Prefs.setDefaultTeam(ctx, id); defaultTeamId = id; firstRun = false
+            if (id == LEAGUE_ID) nflTab = 0 else { teamId = id; tab = 0; nflTab = null }
+        }
+        // Back can't skip the choice silently: it picks the League page (same as the top row).
+        androidx.activity.compose.BackHandler { pick(LEAGUE_ID) }
+        LeagueTheme { FirstRunPicker(teamsL, retryTeams, ::pick) }
+        return
+    }
     if (showSettings) {
         androidx.activity.compose.BackHandler { showSettings = false }
         SettingsScreen(teamsL, retryTeams, { showSettings = false }, { rosterOrder = it }, { defaultTeamId = it })
@@ -111,8 +124,9 @@ fun App() {
         return
     }
     nflTab?.let { nt ->
-        androidx.activity.compose.BackHandler { nflTab = null }
-        NflScreen(nt, { nflTab = it }, onBack = { nflTab = null }, onTeam = { teamId = it; tab = 0; nflTab = null }, onGame = { id, wk -> openGame = id to wk },
+        // When The League is the startup page, back from it leaves the app and there's no "back to my team".
+        androidx.activity.compose.BackHandler(enabled = !leagueHome) { nflTab = null }
+        NflScreen(nt, { nflTab = it }, onBack = if (leagueHome) null else ({ nflTab = null }), onTeam = { teamId = it; tab = 0; nflTab = null }, onGame = { id, wk -> openGame = id to wk },
             onTeams = { nflTab = null; showPicker = true }, onSettings = { showSettings = true })
         return
     }
@@ -125,7 +139,7 @@ fun App() {
             header = {
                 CollapsingTeamBanner(collapse, short, team, (hdrL as? Load.Ok)?.v, title, showHome = teamId != defaultTeamId, teamsOpen = showPicker,
                     onLeague = { showPicker = false; nflTab = 0 }, onTeams = { showPicker = !showPicker },
-                    onHome = { showPicker = false; teamId = defaultTeamId; tab = 0 }, onSettings = { showPicker = false; showSettings = true },
+                    onHome = { showPicker = false; if (leagueHome) nflTab = 0 else { teamId = defaultTeamId; tab = 0 } }, onSettings = { showPicker = false; showSettings = true },
                     modifier = Modifier.onSizeChanged { bannerPx = it.height })
             },
             tabs = { TeamTabs(tab, team, inline = short) { tab = it } }) {
@@ -320,8 +334,8 @@ fun NewsTab(teamId: String, nickname: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NflScreen(startTab: Int, onTabChange: (Int) -> Unit, onBack: () -> Unit, onTeam: (String) -> Unit, onGame: (String, String) -> Unit,
-              onTeams: () -> Unit = onBack, onSettings: (() -> Unit)? = null) {
+fun NflScreen(startTab: Int, onTabChange: (Int) -> Unit, onBack: (() -> Unit)?, onTeam: (String) -> Unit, onGame: (String, String) -> Unit,
+              onTeams: () -> Unit = onBack ?: {}, onSettings: (() -> Unit)? = null) {
     val (l, retry) = rememberLoad("league-news") { Api.leagueNews() }
     val tab = startTab
     var selPlayer by remember { mutableStateOf<Player?>(null) }

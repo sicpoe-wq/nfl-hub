@@ -294,7 +294,7 @@ private fun RoundIcon(icon: ImageVector, desc: String, onClick: () -> Unit) {
     }
 }
 
-private val LeagueGradient = listOf(NflNavy, Color(0xFF0B2A5B), NflRed)
+val LeagueGradient = listOf(NflNavy, Color(0xFF0B2A5B), NflRed)
 
 @Composable
 fun LeagueBannerBackground(modifier: Modifier = Modifier) {
@@ -307,7 +307,7 @@ fun LeagueBannerBackground(modifier: Modifier = Modifier) {
 /** League screen banner: same layout as the team banner (inset-aware icons on top, big name, League/Teams at the bottom),
  *  on the NFL navy→red gradient (no photo, so nothing is mislabeled). */
 @Composable
-fun LeagueBanner(onHome: () -> Unit, onTeams: () -> Unit, onSettings: (() -> Unit)?,
+fun LeagueBanner(onHome: (() -> Unit)?, onTeams: () -> Unit, onSettings: (() -> Unit)?,
                  insets: WindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)) {
     Box(Modifier.fillMaxWidth()) {
         LeagueBannerBackground(Modifier.matchParentSize())
@@ -316,10 +316,10 @@ fun LeagueBanner(onHome: () -> Unit, onTeams: () -> Unit, onSettings: (() -> Uni
 }
 
 @Composable
-fun LeagueBannerExpanded(onHome: () -> Unit, onTeams: () -> Unit, onSettings: (() -> Unit)?, insets: WindowInsets) {
+fun LeagueBannerExpanded(onHome: (() -> Unit)?, onTeams: () -> Unit, onSettings: (() -> Unit)?, insets: WindowInsets) {
     Column(Modifier.fillMaxWidth().windowInsetsPadding(insets), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            RoundIcon(Icons.Default.Home, "Back to my team", onHome)
+            if (onHome != null) RoundIcon(Icons.Default.Home, "Back to my team", onHome) else Spacer(Modifier.size(40.dp))
             Spacer(Modifier.weight(1f))
             NetImage(NFL_SHIELD, Modifier.size(40.dp))
             Spacer(Modifier.weight(1f))
@@ -334,10 +334,10 @@ fun LeagueBannerExpanded(onHome: () -> Unit, onTeams: () -> Unit, onSettings: ((
 }
 
 @Composable
-fun LeagueBannerLandscape(onHome: () -> Unit, onTeams: () -> Unit, onSettings: (() -> Unit)?, insets: WindowInsets) {
+fun LeagueBannerLandscape(onHome: (() -> Unit)?, onTeams: () -> Unit, onSettings: (() -> Unit)?, insets: WindowInsets) {
     Row(Modifier.fillMaxWidth().windowInsetsPadding(insets).padding(start = 4.dp, end = 4.dp, top = 4.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically) {
-        RoundIcon(Icons.Default.Home, "Back to my team", onHome)
+        if (onHome != null) RoundIcon(Icons.Default.Home, "Back to my team", onHome) else Spacer(Modifier.size(40.dp))
         NetImage(NFL_SHIELD, Modifier.size(52.dp))
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
@@ -352,11 +352,11 @@ fun LeagueBannerLandscape(onHome: () -> Unit, onTeams: () -> Unit, onSettings: (
 }
 
 @Composable
-fun LeagueCompactBar(onHome: () -> Unit, onTeams: () -> Unit, onSettings: (() -> Unit)?, insets: WindowInsets) {
+fun LeagueCompactBar(onHome: (() -> Unit)?, onTeams: () -> Unit, onSettings: (() -> Unit)?, insets: WindowInsets) {
     BoxWithConstraints(Modifier.fillMaxWidth().windowInsetsPadding(insets)) {
         val wide = maxWidth >= 560.dp
         Row(Modifier.fillMaxWidth().height(50.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            RoundIcon(Icons.Default.Home, "Back to my team", onHome)
+            if (onHome != null) RoundIcon(Icons.Default.Home, "Back to my team", onHome) else Spacer(Modifier.size(40.dp))
             NetImage(NFL_SHIELD, Modifier.size(32.dp))
             Spacer(Modifier.width(8.dp))
             OutlinedWordmark("THE LEAGUE", WordmarkFonts.anton, Color.White, NflRed, maxSize = 26f, modifier = Modifier.weight(1f), alignment = Alignment.CenterStart)
@@ -369,7 +369,7 @@ fun LeagueCompactBar(onHome: () -> Unit, onTeams: () -> Unit, onSettings: (() ->
 }
 
 @Composable
-fun CollapsingLeagueBanner(state: CollapseState, short: Boolean, onHome: () -> Unit, onTeams: () -> Unit, onSettings: (() -> Unit)?,
+fun CollapsingLeagueBanner(state: CollapseState, short: Boolean, onHome: (() -> Unit)?, onTeams: () -> Unit, onSettings: (() -> Unit)?,
                            insets: WindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)) {
     CollapsingHeader(state,
         background = { LeagueBannerBackground() },

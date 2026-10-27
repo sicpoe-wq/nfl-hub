@@ -29,7 +29,9 @@ object Positions {
 object Prefs {
     private fun sp(c: Context): SharedPreferences = c.getSharedPreferences("nflhub", Context.MODE_PRIVATE)
 
-    fun defaultTeam(c: Context) = sp(c).getString("default_team", EAGLES_ID) ?: EAGLES_ID
+    /** Saved startup page: a team id or LEAGUE_ID. Unsaved: Eagles (personal build) / The League (public build). */
+    fun defaultTeam(c: Context) = sp(c).getString("default_team", null) ?: BuildConfig.DEFAULT_TEAM
+    fun hasDefaultTeam(c: Context) = sp(c).contains("default_team")
     fun setDefaultTeam(c: Context, id: String) = sp(c).edit().putString("default_team", id).apply()
 
     /** Always returns a complete, valid ordering (unknown/missing keys repaired). */

@@ -13,9 +13,25 @@ android {
         applicationId = "com.tim.nflhub"
         minSdk = 26
         targetSdk = 35
-        versionCode = 13
-        versionName = "1.12"
+        versionCode = 14
+        versionName = "1.13"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // personal = Tim's build (opens to the Eagles). public = shareable build (first launch asks for a homepage).
+    // Same applicationId, so either installs as an update over earlier NFL Gridiron builds.
+    flavorDimensions += "edition"
+    productFlavors {
+        create("personal") {
+            dimension = "edition"
+            buildConfigField("boolean", "IS_PUBLIC", "false")
+            buildConfigField("String", "DEFAULT_TEAM", "\"21\"")
+        }
+        create("public") {
+            dimension = "edition"
+            buildConfigField("boolean", "IS_PUBLIC", "true")
+            buildConfigField("String", "DEFAULT_TEAM", "\"nfl\"")
+        }
     }
 
     buildTypes {
@@ -39,6 +55,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {

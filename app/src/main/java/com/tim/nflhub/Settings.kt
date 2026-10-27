@@ -21,7 +21,8 @@ import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(teams: Load<List<Team>>, retryTeams: () -> Unit, onBack: () -> Unit, onOrderChanged: (List<String>) -> Unit, onDefaultChanged: (String) -> Unit) {
+fun SettingsScreen(teams: Load<List<Team>>, retryTeams: () -> Unit, onBack: () -> Unit, onOrderChanged: (List<String>) -> Unit, onDefaultChanged: (String) -> Unit,
+                   initialCurrent: String? = null, initialQuery: String = "") {
     var tab by remember { mutableIntStateOf(0) }
     Scaffold(contentWindowInsets = WindowInsets.safeDrawing, topBar = {
         Column(Modifier.background(EaglesGreen)) {
@@ -39,7 +40,7 @@ fun SettingsScreen(teams: Load<List<Team>>, retryTeams: () -> Unit, onBack: () -
     }) { pad ->
         Box(Modifier.padding(pad).fillMaxSize()) {
             when (tab) {
-                0 -> LoadView(teams, retryTeams) { DefaultTeamSettings(it, onDefaultChanged) }
+                0 -> LoadView(teams, retryTeams) { DefaultTeamSettings(it, onDefaultChanged, initialCurrent, initialQuery) }
                 else -> RosterOrderSettings(onOrderChanged)
             }
         }
@@ -48,37 +49,45 @@ fun SettingsScreen(teams: Load<List<Team>>, retryTeams: () -> Unit, onBack: () -
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DefaultTeamSettings(teams: List<Team>, onChanged: (String) -> Unit) {
+fun DefaultTeamSettings(teams: List<Team>, onChanged: (String) -> Unit, initialCurrent: String? = null, initialQuery: String = "") {
     val ctx = LocalContext.current
-    var current by remember { mutableStateOf(Prefs.defaultTeam(ctx)) }
+    var current by remember { mutableStateOf(initialCurrent ?: Prefs.defaultTeam(ctx)) }
     var expanded by remember { mutableStateOf(false) }
-    var query by remember { mutableStateOf("") }
+    var query by remember { mutableStateOf(initialQuery) }
     val cur = teams.firstOrNull { it.id == current }
-    fun choose(t: Team) { current = t.id; Prefs.setDefaultTeam(ctx, t.id); onChanged(t.id); query = ""; expanded = false }
+    fun chooseId(id: String) { current = id; Prefs.setDefaultTeam(ctx, id); onChanged(id); query = ""; expanded = false }
+    fun choose(t: Team) = chooseId(t.id)
 
     val q = query.trim().lowercase()
     val suggestions = if (q.isEmpty()) emptyList() else teams.filter {
-        it.name.lowercase().contains(q) || it.abbr.lowercase().startsWith(q) || it.name.lowercase().split(" ").any { w -> w.startsWith(q) }
+        it.name.lowercase().contains(q) || it.abbr.lowercase().startsWith(q) || it.name.lowercase().split(" ").any { w -> w.startsWith(q) } || teamMatches(it, q)
     }.sortedBy { if (it.abbr.lowercase() == q || it.name.lowercase().startsWith(q)) 0 else 1 }
 
+    val leagueHit = q.isNotEmpty() && leagueMatches(q)
     LazyColumn(Modifier.fillMaxSize().padding(16.dp)) {
         item {
-            Text("The app opens to this team at launch.", color = Color.Gray, fontSize = 13.sp)
+            Text("The app opens to this team (or The League page) at launch.", color = Color.Gray, fontSize = 13.sp)
             Spacer(Modifier.height(12.dp))
             Text("Choose from list", fontWeight = FontWeight.Bold, color = EaglesGreen)
             Spacer(Modifier.height(6.dp))
             ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
                 OutlinedTextField(
-                    value = cur?.name ?: "Philadelphia Eagles", onValueChange = {}, readOnly = true,
+                    value = if (current == LEAGUE_ID) LEAGUE_LABEL else cur?.name ?: "Philadelphia Eagles", onValueChange = {}, readOnly = true,
                     label = { Text("Default team") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
                     modifier = Modifier.menuAnchor().fillMaxWidth()
                 )
                 ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.heightIn(max = 360.dp)) {
+                    DropdownMenuItem(
+                        text = { Text(LEAGUE_LABEL, fontWeight = if (current == LEAGUE_ID) FontWeight.Bold else FontWeight.SemiBold, color = NflNavy) },
+                        leadingIcon = { NetImage(NFL_SHIELD, Modifier.size(28.dp)) },
+                        onClick = { chooseId(LEAGUE_ID) }
+                    )
+                    HorizontalDivider()
                     teams.forEach { t ->
                         DropdownMenuItem(
                             text = { Text(t.name, fontWeight = if (t.id == current) FontWeight.Bold else FontWeight.Normal) },
-                            leadingIcon = { AsyncImage(t.logo, null, Modifier.size(28.dp)) },
+                            leadingIcon = { NetImage(t.logo, Modifier.size(28.dp)) },
                             onClick = { choose(t) }
                         )
                     }
@@ -94,11 +103,18 @@ fun DefaultTeamSettings(teams: List<Team>, onChanged: (String) -> Unit) {
                 trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Default.Close, "Clear") } },
                 modifier = Modifier.fillMaxWidth()
             )
-            if (q.isNotEmpty() && suggestions.isEmpty()) Text("No matching teams", Modifier.padding(12.dp), color = Color.Gray)
+            if (q.isNotEmpty() && suggestions.isEmpty() && !leagueHit) Text("No matching teams", Modifier.padding(12.dp), color = Color.Gray)
+        }
+        if (leagueHit) item {
+            Row(Modifier.fillMaxWidth().clickable { chooseId(LEAGUE_ID) }.padding(8.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                NetImage(NFL_SHIELD, Modifier.size(32.dp)); Spacer(Modifier.width(12.dp))
+                Text(LEAGUE_LABEL, Modifier.weight(1f), color = NflNavy, fontWeight = FontWeight.SemiBold); Text("NFL", color = Color.Gray)
+            }
+            HorizontalDivider()
         }
         items(suggestions) { t ->
             Row(Modifier.fillMaxWidth().clickable { choose(t) }.padding(8.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                AsyncImage(t.logo, null, Modifier.size(32.dp)); Spacer(Modifier.width(12.dp))
+                NetImage(t.logo, Modifier.size(32.dp)); Spacer(Modifier.width(12.dp))
                 Text(t.name, Modifier.weight(1f)); Text(t.abbr, color = Color.Gray)
             }
             HorizontalDivider()
